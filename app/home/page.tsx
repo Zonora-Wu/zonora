@@ -1,49 +1,20 @@
-import Link from "next/link";
-import Scene3DWrapper from "@/components/Scene3DWrapper";
+"use client";
 
-const posts = [
-  {
-    slug: "hello-world",
-    title: "你好，世界",
-    date: "2026-06-01",
-    excerpt: "欢迎来到 Zonora，这是我用 Next.js 和 Three.js 搭建的个人博客。",
-  },
-  {
-    slug: "threejs-journey",
-    title: "Three.js 学习笔记：从入门到第一个场景",
-    date: "2026-06-03",
-    excerpt: "记录我学习 Three.js 的过程，以及如何在 React 中优雅地使用 3D 渲染。",
-  },
-];
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import GlobeSceneWrapper from "@/components/GlobeSceneWrapper";
+import TypewriterTitle from "@/components/TypewriterTitle";
 
 export default function HomePage() {
   return (
-    <>
-      <section className="hero">
-        <h1>你好，我是 Zonora 👋</h1>
-        <p>
-          这里记录我的思考、创造与探索。偶尔写写代码，也喜欢用三维图形表达想法。
+    <div style={{ position: "fixed", inset: 0, zIndex: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <GlobeSceneWrapper />
+      <div style={{ position: "relative", zIndex: 1, textAlign: "center", pointerEvents: "none" }}>
+        <TypewriterTitle />
+        <p style={{ color: "var(--muted)", fontSize: "clamp(1rem, 2vw, 1.3rem)", letterSpacing: "0.05em" }}>
+          探索未知 · 记录创造
         </p>
-      </section>
-
-      <div className="canvas-container">
-        <Scene3DWrapper />
       </div>
-
-      <section className="posts">
-        <h2>最新文章</h2>
-        <ul className="post-list">
-          {posts.map((post) => (
-            <li key={post.slug}>
-              <Link href={`/blog/${post.slug}`} className="post-card">
-                <time>{post.date}</time>
-                <h3>{post.title}</h3>
-                <p>{post.excerpt}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </>
+    </div>
   );
 }

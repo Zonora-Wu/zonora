@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 *,
 *::before,
 *::after {
@@ -6,7 +8,8 @@
   padding: 0;
 }
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg: #0a0a0a;
   --fg: #ededed;
   --accent: #6366f1;
@@ -14,6 +17,13 @@
   --radius: 8px;
   --max-width: 960px;
   --font-mono: "Geist Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+[data-theme="light"] {
+  --bg: #fafafa;
+  --fg: #171717;
+  --accent: #4f46e5;
+  --muted: #737373;
 }
 
 html {
@@ -143,9 +153,9 @@ a:hover {
 /* ---- 3D Scene ---- */
 .canvas-container {
   width: 100%;
-  height: 400px;
+  height: 650px;
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.08);
   margin: 2rem 0;
 }
