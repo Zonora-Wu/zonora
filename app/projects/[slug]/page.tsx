@@ -16,25 +16,25 @@ export default async function ProjectDetail({ params }: { params: Promise<{ slug
   if (!project) notFound();
 
   return (
-    <section style={{ padding: "3rem 0 4rem", maxWidth: "800px" }}>
-      <Link href="/projects" style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "1.5rem", display: "inline-block" }}>
+    <section className="page-section page-section--wide">
+      <Link href="/projects" className="back-link">
         ← 返回项目
       </Link>
 
-      <h1 style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "0.75rem" }}>
+      <h1 className="detail-title">
         {project.name}
       </h1>
-      <p style={{ color: "var(--muted)", fontSize: "1.05rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+      <p className="detail-lead">
         {project.description}
       </p>
 
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "2rem" }}>
+      <div className="tag-row">
         {project.tech.map((t) => (
-          <span key={t} className="tag" style={{ fontSize: "0.8rem" }}>{t}</span>
+          <span key={t} className="tag tag--detail">{t}</span>
         ))}
       </div>
 
-      <div style={{ color: "var(--fg)", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+      <div className="detail-copy">
         {project.content}
       </div>
     </section>

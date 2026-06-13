@@ -4,21 +4,21 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
+import LangToggle from "@/components/LangToggle";
+import { useLang } from "@/components/LangProvider";
 
-const navItems = [
-  { href: "/home", label: "首页" },
-  { href: "/blog", label: "博客" },
-  { href: "/projects", label: "项目" },
-  { href: "/models", label: "模型" },
-  { href: "/art", label: "绘画" },
-  { href: "/photo", label: "摄影" },
-  { href: "/contact", label: "联系" },
-];
+const navKeys = ["首页", "博客", "项目", "模型", "绘画", "摄影", "联系"];
+
+const navItems = navKeys.map((key, i) => ({
+  href: ["/home", "/blog", "/projects", "/models", "/art", "/photo", "/contact"][i],
+  key,
+}));
 
 export default function NavHeader() {
   const pathname = usePathname();
   const isHome = pathname === "/home";
   const [revealed, setRevealed] = useState(!isHome);
+  const { t } = useLang();
 
   useEffect(() => {
     if (!isHome || revealed) return;
@@ -38,24 +38,18 @@ export default function NavHeader() {
 
   return (
     <header
-      className="header container"
-      style={{
-        position: "relative",
-        zIndex: 10,
-        transform: revealed ? "translateY(0)" : "translateY(-100%)",
-        opacity: revealed ? 1 : 0,
-        transition: "transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease",
-      }}
+      className={`header container home-header webgl-glass-header ${revealed ? "home-header--revealed" : "home-header--hidden"}`}
     >
       <Link href="/home" className="logo">Zonora</Link>
-      <nav style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+      <nav className="header-nav">
         <ul className="nav">
           {navItems.map((item) => (
             <li key={item.href}>
-              <Link href={item.href}>{item.label}</Link>
+              <Link href={item.href}>{t(item.key)}</Link>
             </li>
           ))}
         </ul>
+        <LangToggle />
         <ThemeToggle />
       </nav>
     </header>

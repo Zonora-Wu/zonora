@@ -81,37 +81,18 @@ export default async function BlogPost({
   }
 
   return (
-    <article style={{ padding: "3rem 0 4rem", maxWidth: "720px", margin: "0 auto" }}>
-      <Link
-        href="/blog"
-        style={{
-          color: "var(--muted)",
-          fontSize: "0.9rem",
-          display: "inline-block",
-          marginBottom: "1.5rem",
-        }}
-      >
+    <article className="page-section article-page">
+      <Link href="/blog" className="back-link">
         ← 返回博客
       </Link>
-      <time
-        style={{ color: "var(--muted)", fontSize: "0.85rem", display: "block" }}
-      >
+      <time className="article-date">
         {post.date}
       </time>
-      <h1
-        style={{
-          fontSize: "2.5rem",
-          fontWeight: 800,
-          letterSpacing: "-0.03em",
-          lineHeight: 1.2,
-          margin: "0.5rem 0 2rem",
-        }}
-      >
+      <h1 className="article-title">
         {post.title}
       </h1>
       <div
-        className="prose"
-        style={{ lineHeight: 1.8, fontSize: "1.05rem" }}
+        className="prose article-prose"
         dangerouslySetInnerHTML={{
           __html: post.content
             .replace(/^### (.+)$/gm, "<h3>$1</h3>")

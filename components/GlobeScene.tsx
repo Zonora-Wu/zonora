@@ -5,10 +5,12 @@ import { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 
 const mousePos = { x: 0, y: 0 };
+let lastMouseTime = 0;
 
 function Globe() {
   const groupRef = useRef<THREE.Group>(null);
   const targetRot = useRef({ x: 0, y: 0 });
+  const baseRotationY = useRef(0);
 
   const particles = useMemo(() => {
     const count = 2800;
@@ -41,12 +43,18 @@ function Globe() {
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
-    targetRot.current.x += (mousePos.y * 0.5 - targetRot.current.x) * 0.04;
-    targetRot.current.y += (mousePos.x * 0.5 - targetRot.current.y) * 0.04;
+    const idle = performance.now() - lastMouseTime > 2400;
+    if (idle) {
+      targetRot.current.x += (0 - targetRot.current.x) * 0.012;
+      targetRot.current.y += (0 - targetRot.current.y) * 0.012;
+    } else {
+      targetRot.current.x += (mousePos.y * 0.5 - targetRot.current.x) * 0.032;
+      targetRot.current.y += (mousePos.x * 0.5 - targetRot.current.y) * 0.032;
+    }
 
-    groupRef.current.rotation.y += delta * 0.06;
-    groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetRot.current.x * 0.4, 0.05);
-    groupRef.current.rotation.y += targetRot.current.y * 0.02;
+    baseRotationY.current += delta * 0.018;
+    groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetRot.current.x * 0.33, 0.022);
+    groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, baseRotationY.current + targetRot.current.y, 0.022);
   });
 
   return (
@@ -92,6 +100,7 @@ export default function GlobeScene() {
     const handler = (e: MouseEvent) => {
       mousePos.x = (e.clientX / window.innerWidth) * 2 - 1;
       mousePos.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      lastMouseTime = performance.now();
     };
     window.addEventListener("mousemove", handler);
     return () => window.removeEventListener("mousemove", handler);
@@ -101,7 +110,8 @@ export default function GlobeScene() {
     <Canvas
       camera={{ position: [0, 0.5, 4.5], fov: 50 }}
       style={{ position: "absolute", inset: 0 }}
-      gl={{ alpha: true, antialias: true }}
+      dpr={[1, 1.5]}
+      gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
     >
       <ambientLight intensity={0.3} />
       <Globe />

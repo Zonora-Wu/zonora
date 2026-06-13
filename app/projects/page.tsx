@@ -12,13 +12,13 @@ const projects = [
 
 export default function ProjectsPage() {
   return (
-    <section style={{ padding: "3rem 0 4rem" }}>
-      <h1 style={{ fontSize: "2.25rem", fontWeight: 800, marginBottom: "0.5rem" }}>项目</h1>
-      <p style={{ color: "var(--muted)", fontSize: "1.05rem", marginBottom: "2.5rem" }}>
+    <section className="page-section">
+      <h1 className="page-title">项目</h1>
+      <p className="page-lead">
         全栈开发、安全研究与三维可视化项目。
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
+      <div className="card-grid">
         {projects.map((proj) => (
           <ProjectCard key={proj.slug} {...proj} />
         ))}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import ThemeProvider from "@/components/ThemeProvider";
+import LangProvider from "@/components/LangProvider";
 import NavHeader from "@/components/NavHeader";
+import PageTransition from "@/components/PageTransition";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,11 +12,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" data-theme="dark">
+    <html lang="zh-CN" data-theme="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <NavHeader />
-          <main className="container">{children}</main>
+          <LangProvider>
+            <NavHeader />
+            <PageTransition>{children}</PageTransition>
+          </LangProvider>
         </ThemeProvider>
       </body>
     </html>

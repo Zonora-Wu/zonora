@@ -13,13 +13,13 @@ const models = [
 
 export default function ModelsPage() {
   return (
-    <section style={{ padding: "3rem 0 4rem" }}>
-      <h1 style={{ fontSize: "2.25rem", fontWeight: 800, marginBottom: "0.5rem" }}>模型</h1>
-      <p style={{ color: "var(--muted)", fontSize: "1.05rem", marginBottom: "2.5rem" }}>
+    <section className="page-section">
+      <h1 className="page-title">模型</h1>
+      <p className="page-lead">
         Three.js 3D 模型展示库 — 悬停卡片查看详情，点击进入交互式浏览。
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.5rem" }}>
+      <div className="card-grid">
         {models.map((model) => (
           <ModelCard key={model.slug} {...model} />
         ))}

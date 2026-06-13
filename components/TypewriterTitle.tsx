@@ -34,14 +34,9 @@ export default function TypewriterTitle() {
   }, [animate]);
 
   return (
-    <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)", fontWeight: 900, letterSpacing: "-0.03em", color: "var(--fg)", marginBottom: "0.3em" }}>
+    <h1 className="typewriter-title">
       {text}
-      <span style={{
-        opacity: 0.4,
-        fontWeight: 300,
-        animation: "blink 1s step-end infinite",
-      }}>|</span>
-      <style>{`@keyframes blink { 50% { opacity: 0; } }`}</style>
+      <span className="typewriter-cursor">|</span>
     </h1>
   );
 }

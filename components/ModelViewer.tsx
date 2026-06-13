@@ -79,7 +79,8 @@ export default function ModelViewer({
         style={{
           background: "radial-gradient(ellipse at center, #1a1030 0%, #0a0a1a 100%)",
         }}
-        gl={{ preserveDrawingBuffer: true }}
+        dpr={[1, 1.5]}
+        gl={{ antialias: true, powerPreference: "high-performance" }}
       >
         <Suspense fallback={<Loader />}>
           {/* 灯光 */}

@@ -17,11 +17,11 @@ const allPosts = [
 
 export default function BlogPage() {
   return (
-    <section style={{ padding: "3rem 0 4rem" }}>
-      <h1 style={{ fontSize: "2.25rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+    <section className="page-section">
+      <h1 className="page-title">
         博客
       </h1>
-      <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
+      <p className="page-count">
         共 {allPosts.length} 篇文章
       </p>
       <ul className="post-list">
