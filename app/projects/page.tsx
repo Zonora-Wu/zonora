@@ -7,6 +7,16 @@ const projects = [
     description: "CQUPT-SRC — 连接漏洞响应、学习实践、证书激励与校园安全共建",
     detail: "React + NestJS + Prisma + PostgreSQL + Hermes Agent + DeepSeek · 全栈安全平台",
     tags: ["全栈", "React", "NestJS", "安全"],
+    image: "/projects/cqupt-src.jpg",
+  },
+  {
+    slug: "zonora",
+    name: "个人博客网站",
+    description: "Zonora — 用文字、项目与三维视觉记录思考和创造的个人博客网站",
+    detail: "Next.js + TypeScript + Three.js · 个人博客 / 作品展示网站",
+    tags: ["博客", "Next.js", "TypeScript", "Three.js"],
+    image: "/projects/zonora-blog.png",
+    icon: "🌐",
   },
 ];
 

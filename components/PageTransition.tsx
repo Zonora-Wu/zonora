@@ -3,8 +3,8 @@
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const EXIT_DURATION = 400;
-const ENTER_DURATION = 560;
+const EXIT_DURATION = 480;
+const ENTER_DURATION = 820;
 const ROUTE_ORDER = ["/home", "/blog", "/projects", "/models", "/art", "/photo", "/contact"];
 
 type TransitionPhase = "entering" | "idle" | "exiting";
@@ -69,6 +69,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
 
     if (prefersReducedMotion()) {
       setPhase("idle");
+      window.dispatchEvent(new CustomEvent("route-transition-idle"));
       return;
     }
 
@@ -79,6 +80,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
 
     transitionTimer.current = window.setTimeout(() => {
       setPhase("idle");
+      window.dispatchEvent(new CustomEvent("route-transition-idle"));
       transitionTimer.current = null;
     }, ENTER_DURATION);
 
@@ -139,7 +141,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
       data-transition-phase={phase}
       data-transition-direction={direction}
     >
-      <div className="page-transition-view" key={pathname}>
+      <div className={`page-transition-view ${pathname === "/home" ? "page-transition-view--home" : ""}`} key={pathname}>
         {children}
       </div>
     </main>

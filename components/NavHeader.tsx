@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import LangToggle from "@/components/LangToggle";
 import { useLang } from "@/components/LangProvider";
@@ -16,9 +16,28 @@ const navItems = navKeys.map((key, i) => ({
 
 export default function NavHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === "/home";
   const [revealed, setRevealed] = useState(!isHome);
   const { t } = useLang();
+
+  useEffect(() => {
+    const prefetchAll = () => {
+      navItems.forEach((item) => router.prefetch(item.href));
+    };
+    const win = window as Window & typeof globalThis & {
+      requestIdleCallback?: (callback: IdleRequestCallback) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    if (typeof win.requestIdleCallback === "function" && typeof win.cancelIdleCallback === "function") {
+      const idleId = win.requestIdleCallback(prefetchAll);
+      return () => win.cancelIdleCallback?.(idleId);
+    }
+
+    const timer = window.setTimeout(prefetchAll, 300);
+    return () => window.clearTimeout(timer);
+  }, [router]);
 
   useEffect(() => {
     if (!isHome || revealed) return;
@@ -40,12 +59,27 @@ export default function NavHeader() {
     <header
       className={`header container home-header webgl-glass-header ${revealed ? "home-header--revealed" : "home-header--hidden"}`}
     >
-      <Link href="/home" className="logo">Zonora</Link>
+      <Link
+        href="/home"
+        className="logo"
+        prefetch
+        onPointerEnter={() => router.prefetch("/home")}
+        onFocus={() => router.prefetch("/home")}
+      >
+        Zonora
+      </Link>
       <nav className="header-nav">
         <ul className="nav">
           {navItems.map((item) => (
             <li key={item.href}>
-              <Link href={item.href}>{t(item.key)}</Link>
+              <Link
+                href={item.href}
+                prefetch
+                onPointerEnter={() => router.prefetch(item.href)}
+                onFocus={() => router.prefetch(item.href)}
+              >
+                {t(item.key)}
+              </Link>
             </li>
           ))}
         </ul>

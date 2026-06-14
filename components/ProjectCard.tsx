@@ -10,6 +10,7 @@ export default function ProjectCard({
   detail,
   tags,
   image,
+  icon = "🔐",
 }: {
   slug: string;
   name: string;
@@ -17,6 +18,7 @@ export default function ProjectCard({
   detail: string;
   tags: string[];
   image?: string;
+  icon?: string;
 }) {
   const cardRef = useRef<HTMLAnchorElement>(null);
 
@@ -52,7 +54,7 @@ export default function ProjectCard({
               width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)",
             }}>
-              <span style={{ fontSize: "2.5rem", opacity: 0.3 }}>🔐</span>
+              <span style={{ fontSize: "2.5rem", opacity: 0.3 }}>{icon}</span>
             </div>
           )}
           <div className="model-card-badge">{tags[0]}</div>

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useDeferredWebGLMount } from "@/components/useDeferredWebGLMount";
 
 const WEBGL_MOUNT_DELAY = 200;
 
@@ -14,16 +14,8 @@ export default function ModelViewerWrapper({
   modelPath: string;
   height?: string;
 }) {
-  const [shouldMount, setShouldMount] = useState(false);
+  const shouldMount = useDeferredWebGLMount(WEBGL_MOUNT_DELAY);
   const resolvedHeight = height ?? "70vh";
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setShouldMount(true);
-    }, WEBGL_MOUNT_DELAY);
-
-    return () => window.clearTimeout(timer);
-  }, []);
 
   if (!shouldMount) {
     return (

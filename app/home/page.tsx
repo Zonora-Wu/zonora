@@ -28,9 +28,6 @@ export default function HomePage() {
       <GlobeSceneWrapper />
       <div className="home-content">
         <TypewriterTitle />
-        <p className="home-subtitle">
-          探索未知 · 记录创造
-        </p>
 
         {!revealed && (
           <div className="home-prompt-wrap">
