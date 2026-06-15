@@ -18,8 +18,18 @@ export default function NavHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isHome = pathname === "/home";
-  const [revealed, setRevealed] = useState(!isHome);
+  const [revealed, setRevealed] = useState(false);
   const { t } = useLang();
+
+  // 不在首页时导航栏始终显示
+  const visible = !isHome || revealed;
+
+  // 从其他页面返回首页时(非首页路由)，导航栏直接显示挂载
+  useEffect(() => {
+    if (isHome && revealed) {
+      window.dispatchEvent(new CustomEvent("nav-revealed"));
+    }
+  }, [isHome, revealed]);
 
   useEffect(() => {
     const prefetchAll = () => {
@@ -41,7 +51,10 @@ export default function NavHeader() {
 
   useEffect(() => {
     if (!isHome || revealed) return;
-    const reveal = () => setRevealed(true);
+    const reveal = () => {
+      setRevealed(true);
+      window.dispatchEvent(new CustomEvent("nav-revealed"));
+    };
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === "F5" || e.key === "F12") return;
       e.preventDefault();
@@ -57,7 +70,7 @@ export default function NavHeader() {
 
   return (
     <header
-      className={`header container home-header webgl-glass-header ${revealed ? "home-header--revealed" : "home-header--hidden"}`}
+      className={`header container home-header webgl-glass-header ${visible ? "home-header--revealed" : "home-header--hidden"}`}
     >
       <Link
         href="/home"
