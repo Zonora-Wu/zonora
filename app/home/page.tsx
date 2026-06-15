@@ -9,8 +9,7 @@ export default function HomePage() {
 
   const reveal = useCallback(() => setRevealed(true), []);
 
-  // NavHeader 通过 nav-revealed 事件通知 HomePage 同步隐藏提示
-  // 从其他页面返回时 NavHeader 已 reveal，会立即派发事件
+  // 从其他页面返回首页时，NavHeader 会派发 nav-revealed 事件通知
   useEffect(() => {
     if (revealed) return;
 
