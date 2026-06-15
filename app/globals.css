@@ -1519,6 +1519,104 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   font-size: 0.85rem;
 }
 
+/* ---- Contact ---- */
+.contact-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.contact-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(100%, 360px);
+  padding: 1.5rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: calc(var(--radius) + 4px);
+  background: rgba(255, 255, 255, 0.022);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0;
+  transform: translateY(12px);
+  animation: contact-card-enter 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
+}
+
+.contact-card:hover {
+  border-color: rgba(99, 102, 241, 0.28);
+  background: rgba(99, 102, 241, 0.04);
+  transform: translateY(-2px);
+}
+
+.contact-card__icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.52);
+  transition: color 0.3s ease;
+}
+
+.contact-card:hover .contact-card__icon {
+  color: var(--accent);
+}
+
+.contact-card__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.contact-card__value {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #e5e5e5;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.contact-card__values {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@keyframes contact-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 540px) {
+  .contact-card {
+    width: 100%;
+    padding: 1.15rem 1rem;
+  }
+
+  .contact-card__icon {
+    font-size: 1.15rem;
+  }
+
+  .contact-card__label {
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+  }
+
+  .contact-card__value {
+    font-size: 0.9rem;
+  }
+}
+
 /* ---- Spinner ---- */
 .spinner {
   width: 32px;

@@ -2,6 +2,17 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 const projects: Record<string, { name: string; description: string; tech: string[]; content: string; githubUrl?: string }> = {
+  holocubic: {
+    name: "HoloCubic · 全息小电视",
+    description: "基于 ESP32-PICO-D4 开源方案的桌面全息小电视，从硬件设计、元器件选型、PCB 打样调试到固件二次开发全链路实践。",
+    tech: ["ESP32-PICO-D4", "C++", "LVGL", "FreeRTOS", "Arduino", "PCB Design"],
+    githubUrl: "https://github.com/peng-zhihui/HoloCubic",
+    content:
+      "HoloCubic 是一个基于 ESP32-PICO-D4 微控制器的开源桌面信息终端项目，外观为透明外壳的全息小电视形态。\n\n" +
+      "硬件方面，我从零完成了元器件采购与 BOM 清单核对、3D 打印外壳打样与装配测试、PCB 打样及 SPI 封装的 ESP32-PICO-D4 芯片手工焊接与调试。整个硬件链路从原理图验证到最终成品组装均由个人独立完成。\n\n" +
+      "固件方面，在开源固件基础上进行了深度二次开发。使用 C++ 和 LVGL 图形库重构了部分 UI 界面，优化了交互动效与菜单层级。除了内置的天气、时钟、相册轮播、视频播放、电脑投屏和 Web 配置后台等原有功能外，我新增了番茄钟计时模块和每日一言语录模块，提升了设备的日常实用性和趣味性。\n\n" +
+      "最终实现了一台功能完整、运行稳定、外观精致的桌面全息小电视，具备信息展示、媒体播放、效率工具等多重角色。",
+  },
   "cqupt-src": {
     name: "校园漏洞响应与安全学习平台",
     description: "CQUPT-SRC 是面向高校场景的漏洞响应与安全学习平台，覆盖漏洞提交、审核流转、积分商城、证书激励、AI 助手等模块。",
