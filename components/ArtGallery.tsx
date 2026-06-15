@@ -10,6 +10,15 @@ type ArtGalleryProps = {
 };
 
 const REPEAT = 3;
+const MODAL_EXIT_MS = 440;
+const MODAL_ENTER_MS = 500;
+
+type ModalTransition = {
+  to: ArtSketch;
+  direction: "prev" | "next";
+  phase: "exit" | "enter";
+  key: number;
+};
 
 function useReducedMotion() {
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -71,46 +80,35 @@ function balancedRows(sketches: ArtSketch[]): { topRow: ArtSketch[]; bottomRow: 
   return { topRow: top, bottomRow: bottom };
 }
 
-function useImageRect(imgRef: React.RefObject<HTMLImageElement | null>) {
-  const [rect, setRect] = useState<{ width: number; height: number } | null>(null);
-
-  useEffect(() => {
-    const img = imgRef.current;
-    if (!img) {
-      setRect(null);
-      return;
-    }
-
-    const measure = () => setRect({ width: img.offsetWidth, height: img.offsetHeight });
-
-    if (img.complete) {
-      measure();
-    } else {
-      img.addEventListener("load", measure, { once: true });
-    }
-
-    const observer = new ResizeObserver(() => measure());
-    observer.observe(img);
-
-    window.addEventListener("resize", measure);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [imgRef]);
-
-  return rect;
-}
-
 export default function ArtGallery({ sketches }: ArtGalleryProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
   const [selectedSketch, setSelectedSketch] = useState<ArtSketch | null>(null);
+  const [modalTransition, setModalTransition] = useState<ModalTransition | null>(null);
+  const modalTransitionKey = useRef(0);
   const isResetting = useRef(false);
   const [mounted, setMounted] = useState(false);
-  const modalImgRef = useRef<HTMLImageElement>(null);
-  const imageRect = useImageRect(modalImgRef);
+
+  const closeModal = useCallback(() => {
+    setSelectedSketch(null);
+    setModalTransition(null);
+  }, []);
+
+  useEffect(() => {
+    if (!modalTransition) return;
+
+    const timeout = window.setTimeout(() => {
+      if (modalTransition.phase === "exit") {
+        setSelectedSketch(modalTransition.to);
+        setModalTransition({ ...modalTransition, phase: "enter" });
+        return;
+      }
+
+      setModalTransition(null);
+    }, modalTransition.phase === "exit" ? MODAL_EXIT_MS : MODAL_ENTER_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [modalTransition]);
 
   const startAtCenter = useCallback(() => {
     const scroller = scrollerRef.current;
@@ -151,7 +149,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedSketch(null);
+      if (event.key === "Escape") closeModal();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -160,7 +158,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedSketch]);
+  }, [selectedSketch, closeModal]);
 
   const syncReset = useCallback(() => {
     const scroller = scrollerRef.current;
@@ -191,16 +189,38 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
   );
 
   const goToPrev = useCallback(() => {
-    if (selectedIndex < 0) return;
+    if (selectedIndex < 0 || !selectedSketch || modalTransition) return;
     const prev = flatOrder[(selectedIndex - 1 + flatOrder.length) % flatOrder.length];
-    setSelectedSketch(prev);
-  }, [selectedIndex, flatOrder]);
+
+    if (reducedMotion) {
+      setSelectedSketch(prev);
+      return;
+    }
+
+    setModalTransition({
+      to: prev,
+      direction: "prev",
+      phase: "exit",
+      key: ++modalTransitionKey.current,
+    });
+  }, [selectedIndex, selectedSketch, flatOrder, reducedMotion, modalTransition]);
 
   const goToNext = useCallback(() => {
-    if (selectedIndex < 0) return;
+    if (selectedIndex < 0 || !selectedSketch || modalTransition) return;
     const next = flatOrder[(selectedIndex + 1) % flatOrder.length];
-    setSelectedSketch(next);
-  }, [selectedIndex, flatOrder]);
+
+    if (reducedMotion) {
+      setSelectedSketch(next);
+      return;
+    }
+
+    setModalTransition({
+      to: next,
+      direction: "next",
+      phase: "exit",
+      key: ++modalTransitionKey.current,
+    });
+  }, [selectedIndex, selectedSketch, flatOrder, reducedMotion, modalTransition]);
 
   const handleScroll = useCallback(() => {
     const scroller = scrollerRef.current;
@@ -318,12 +338,12 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
               role="dialog"
               aria-modal="true"
               aria-label={`${selectedSketch.title} 画作预览`}
-              onClick={() => setSelectedSketch(null)}
+              onClick={closeModal}
             >
               <button
                 type="button"
                 className="art-modal__close"
-                onClick={() => setSelectedSketch(null)}
+                onClick={closeModal}
                 aria-label="关闭"
               >
                 ✕
@@ -332,38 +352,55 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
               <div className="art-modal__panel" onClick={(e) => e.stopPropagation()}>
                 <div className="art-modal__stage">
                   <div className="art-modal__frame">
-                    <img
-                      ref={modalImgRef}
-                      className="art-modal__image"
-                      src={selectedSketch.src}
-                      width={selectedSketch.width}
-                      height={selectedSketch.height}
-                      alt={selectedSketch.title}
-                      decoding="async"
-                      draggable={false}
-                    />
-                    {imageRect ? (
-                      <>
-                        <button
-                          type="button"
-                          className="art-modal__nav art-modal__nav--prev"
-                          style={{ right: imageRect.width + 12 }}
-                          onClick={(e) => { e.stopPropagation(); goToPrev(); }}
-                          aria-label="上一张"
-                        >
-                          ←
-                        </button>
-                        <button
-                          type="button"
-                          className="art-modal__nav art-modal__nav--next"
-                          style={{ left: imageRect.width + 12 }}
-                          onClick={(e) => { e.stopPropagation(); goToNext(); }}
-                          aria-label="下一张"
-                        >
-                          →
-                        </button>
-                      </>
-                    ) : null}
+                    {modalTransition?.phase === "exit" ? (
+                      <img
+                        key={`exit-${modalTransition.key}-${selectedSketch.id}`}
+                        className={`art-modal__image art-modal__image--exit-flow art-modal__image--exit-${modalTransition.direction}`}
+                        src={selectedSketch.src}
+                        width={selectedSketch.width}
+                        height={selectedSketch.height}
+                        alt={selectedSketch.title}
+                        decoding="async"
+                        draggable={false}
+                      />
+                    ) : modalTransition?.phase === "enter" ? (
+                      <img
+                        key={`enter-${modalTransition.key}-${selectedSketch.id}`}
+                        className={`art-modal__image art-modal__image--enter art-modal__image--enter-${modalTransition.direction}`}
+                        src={selectedSketch.src}
+                        width={selectedSketch.width}
+                        height={selectedSketch.height}
+                        alt={selectedSketch.title}
+                        decoding="async"
+                        draggable={false}
+                      />
+                    ) : (
+                      <img
+                        className="art-modal__image"
+                        src={selectedSketch.src}
+                        width={selectedSketch.width}
+                        height={selectedSketch.height}
+                        alt={selectedSketch.title}
+                        decoding="async"
+                        draggable={false}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      className="art-modal__nav art-modal__nav--prev"
+                      onClick={(e) => { e.stopPropagation(); goToPrev(); }}
+                      aria-label="上一张"
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      className="art-modal__nav art-modal__nav--next"
+                      onClick={(e) => { e.stopPropagation(); goToNext(); }}
+                      aria-label="下一张"
+                    >
+                      →
+                    </button>
                   </div>
                 </div>
                 <div className="art-modal__caption">

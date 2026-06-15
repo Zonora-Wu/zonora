@@ -1217,7 +1217,9 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   align-items: center;
   justify-content: center;
   padding: clamp(1rem, 3vw, 2.5rem);
-  background: transparent;
+  background: color-mix(in srgb, var(--bg) 18%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   animation: art-modal-fade 0.18s ease-out;
 }
 
@@ -1250,7 +1252,7 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 
 .art-modal__nav {
   --nav-size: 2.8rem;
-  position: absolute;
+  position: fixed;
   top: 50%;
   transform: translateY(-50%);
   z-index: 82;
@@ -1272,11 +1274,11 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 }
 
 .art-modal__nav--prev {
-  /* position set via JS inline style — positioned to the LEFT of the image */
+  left: clamp(1rem, 4vw, 3rem);
 }
 
 .art-modal__nav--next {
-  /* position set via JS inline style — positioned to the RIGHT of the image */
+  right: clamp(1rem, 4vw, 3rem);
 }
 
 .art-modal__nav:hover,
@@ -1300,7 +1302,7 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  max-width: min(90vw, 88rem);
+  max-width: min(calc(100vw - 10rem), 88rem);
   max-height: calc(90vh - 3.5rem);
   vertical-align: top;
 }
@@ -1323,13 +1325,46 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 
 .art-modal__image {
   display: block;
-  max-width: min(90vw, 88rem);
+  max-width: min(calc(100vw - 10rem), 88rem);
   max-height: calc(90vh - 4rem);
   width: auto;
   height: auto;
   object-fit: contain;
   border-radius: clamp(12px, 1.8vw, 20px);
   background: color-mix(in srgb, var(--bg) 86%, var(--fg) 5%);
+}
+
+.art-modal__image--enter {
+  position: relative;
+  z-index: 1;
+  animation-duration: 500ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.art-modal__image--exit-flow {
+  position: relative;
+  z-index: 1;
+  animation-duration: 440ms;
+  animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+  animation-fill-mode: both;
+  pointer-events: none;
+}
+
+.art-modal__image--enter-prev {
+  animation-name: art-modal-image-enter-from-left;
+}
+
+.art-modal__image--exit-prev {
+  animation-name: art-modal-image-exit-to-right;
+}
+
+.art-modal__image--enter-next {
+  animation-name: art-modal-image-enter-from-right;
+}
+
+.art-modal__image--exit-next {
+  animation-name: art-modal-image-exit-to-left;
 }
 
 .art-modal__caption {
@@ -1356,6 +1391,50 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes art-modal-image-enter-from-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-34px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes art-modal-image-enter-from-right {
+  from {
+    opacity: 0;
+    transform: translate3d(34px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes art-modal-image-exit-to-left {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(-46px, 0, 0);
+  }
+}
+
+@keyframes art-modal-image-exit-to-right {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(46px, 0, 0);
   }
 }
 
@@ -1390,7 +1469,19 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 
   .art-modal__nav {
     --nav-size: 2.4rem;
-    --nav-gap: 0.35rem;
+  }
+
+  .art-modal__nav--prev {
+    left: 0.75rem;
+  }
+
+  .art-modal__nav--next {
+    right: 0.75rem;
+  }
+
+  .art-modal__frame,
+  .art-modal__image {
+    max-width: calc(100vw - 6rem);
   }
 
   .art-modal__close {
@@ -1415,7 +1506,9 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   .art-work__caption,
   .art-modal,
   .art-modal__panel,
-  .art-modal__close {
+  .art-modal__close,
+  .art-modal__nav,
+  .art-modal__image {
     transition: none !important;
     animation: none !important;
   }
