@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import GlobeSceneWrapper from "@/components/GlobeSceneWrapper";
 import TypewriterTitle from "@/components/TypewriterTitle";
+import { isNavRevealed } from "@/components/NavHeader";
 
 export default function HomePage() {
-  const [revealed, setRevealed] = useState(false);
+  const [revealed, setRevealed] = useState(() => isNavRevealed());
 
   const reveal = useCallback(() => setRevealed(true), []);
 

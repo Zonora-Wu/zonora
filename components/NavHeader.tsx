@@ -7,6 +7,15 @@ import ThemeToggle from "@/components/ThemeToggle";
 import LangToggle from "@/components/LangToggle";
 import { useLang } from "@/components/LangProvider";
 
+// 模块级变量：跨 HomePage 重挂载保持 "已揭示" 状态，避免返回首页时提示闪烁
+let _navRevealed = false;
+export function isNavRevealed() {
+  return _navRevealed;
+}
+function markNavRevealed() {
+  _navRevealed = true;
+}
+
 const navKeys = ["首页", "博客", "项目", "模型", "绘画", "摄影", "联系"];
 
 const navItems = navKeys.map((key, i) => ({
@@ -18,7 +27,7 @@ export default function NavHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isHome = pathname === "/home";
-  const [revealed, setRevealed] = useState(false);
+  const [revealed, setRevealed] = useState(_navRevealed);
   const { t } = useLang();
 
   // 不在首页时导航栏始终显示
@@ -52,6 +61,7 @@ export default function NavHeader() {
   useEffect(() => {
     if (!isHome || revealed) return;
     const reveal = () => {
+      markNavRevealed();
       setRevealed(true);
       window.dispatchEvent(new CustomEvent("nav-revealed"));
     };
