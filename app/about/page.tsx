@@ -20,8 +20,10 @@ export default function AboutPage() {
           联系方式
         </h2>
         <ul>
+          <li>电话: +44 07784 071819</li>
           <li>GitHub: github.com/zonora</li>
-          <li>Email: hi@zonora.dev</li>
+          <li>Email: zonora@qq.com</li>
+          <li>Bilibili: @吃小灰的糍粑</li>
         </ul>
       </div>
     </section>
