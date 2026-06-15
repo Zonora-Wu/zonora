@@ -1,5 +1,7 @@
 "use client";
 
+import { assetPath } from "@/lib/sitePaths";
+
 export default function ModelCardThumbnailWrapper({ modelPath }: { modelPath: string }) {
   return (
     <div style={{
@@ -11,7 +13,7 @@ export default function ModelCardThumbnailWrapper({ modelPath }: { modelPath: st
       background: "linear-gradient(135deg, #1a1035 0%, #0d0d2b 100%)",
     }}>
       <img
-        src="/models/rog14-thumb.png"
+        src={assetPath(modelPath)}
         alt="ROG 幻14"
         style={{
           width: "100%",

@@ -1,13 +1,5 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Smiley Sans";
-  src: url("/fonts/SmileySans-Oblique.woff2") format("woff2");
-  font-weight: 400 900;
-  font-style: oblique;
-  font-display: swap;
-}
-
 *,
 *::before,
 *::after {
@@ -45,7 +37,7 @@ html {
 body {
   color: var(--fg);
   background: var(--bg);
-  font-family: "Smiley Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-smiley-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;

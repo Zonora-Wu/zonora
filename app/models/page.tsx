@@ -1,4 +1,5 @@
 import ModelCard from "@/components/ModelCard";
+import { assetPath } from "@/lib/sitePaths";
 
 const models = [
   {
@@ -6,7 +7,7 @@ const models = [
     name: "ROG 幻14 笔记本电脑",
     description: "ASUS ROG Zephyrus G14 — 去镭射孔定制版本",
     detail: "精细 3D 扫描模型 · 拖拽旋转 · 滚轮缩放 · 点击开合屏幕 · 支持亮色/暗色双主题",
-    modelPath: "/models/rog14-thumb.png",
+    modelPath: assetPath("/models/rog14-thumb.png"),
     tags: ["硬表面", "电子产品", "GLB"],
   },
 ];

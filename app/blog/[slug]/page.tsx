@@ -68,6 +68,12 @@ Stay tuned!`,
   },
 };
 
+export function generateStaticParams() {
+  return Object.keys(posts).map((slug) => ({ slug }));
+}
+
+export const dynamicParams = false;
+
 export default async function BlogPost({
   params,
 }: {

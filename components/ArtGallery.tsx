@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { assetPath } from "@/lib/sitePaths";
 import type { CSSProperties, FocusEvent, MouseEvent, WheelEvent } from "react";
 import type { ArtSketch } from "@/data/artSketches";
 
@@ -288,7 +289,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
         <span className="art-work__surface">
           <img
             className="art-work__image"
-            src={sketch.src}
+            src={assetPath(sketch.src)}
             width={sketch.width}
             height={sketch.height}
             alt={sketch.title}
@@ -356,7 +357,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
                       <img
                         key={`exit-${modalTransition.key}-${selectedSketch.id}`}
                         className={`art-modal__image art-modal__image--exit-flow art-modal__image--exit-${modalTransition.direction}`}
-                        src={selectedSketch.src}
+                        src={assetPath(selectedSketch.src)}
                         width={selectedSketch.width}
                         height={selectedSketch.height}
                         alt={selectedSketch.title}
@@ -367,7 +368,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
                       <img
                         key={`enter-${modalTransition.key}-${selectedSketch.id}`}
                         className={`art-modal__image art-modal__image--enter art-modal__image--enter-${modalTransition.direction}`}
-                        src={selectedSketch.src}
+                        src={assetPath(selectedSketch.src)}
                         width={selectedSketch.width}
                         height={selectedSketch.height}
                         alt={selectedSketch.title}
@@ -377,7 +378,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
                     ) : (
                       <img
                         className="art-modal__image"
-                        src={selectedSketch.src}
+                        src={assetPath(selectedSketch.src)}
                         width={selectedSketch.width}
                         height={selectedSketch.height}
                         alt={selectedSketch.title}

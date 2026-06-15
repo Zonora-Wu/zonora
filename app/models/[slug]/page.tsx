@@ -22,6 +22,12 @@ const models: Record<
   },
 };
 
+export function generateStaticParams() {
+  return Object.keys(models).map((slug) => ({ slug }));
+}
+
+export const dynamicParams = false;
+
 export default async function ModelDetail({
   params,
 }: {

@@ -1,5 +1,7 @@
-export const ENVIRONMENT_MAP_URL = '/hdr/sunset_2K_65d6cbb9-5c06-44f8-9be3-41df7a99f52a.exr'
-export const LAPTOP_MODEL_URL = '/models/rog14-cleaned.glb'
+import { assetPath } from '@/lib/sitePaths'
+
+export const ENVIRONMENT_MAP_URL = assetPath('/hdr/sunset_2K_65d6cbb9-5c06-44f8-9be3-41df7a99f52a.exr')
+export const LAPTOP_MODEL_URL = assetPath('/models/rog14-cleaned.glb')
 
 let preloaded = false
 

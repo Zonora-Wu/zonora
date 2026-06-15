@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { stripBasePath } from "@/lib/sitePaths";
 
 const EXIT_DURATION = 480;
 const ENTER_DURATION = 820;
@@ -34,7 +35,7 @@ function getDirection(fromPath: string, toPath: string): TransitionDirection {
 }
 
 export default function PageTransition({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
+  const pathname = stripBasePath(usePathname());
   const router = useRouter();
   const [phase, setPhase] = useState<TransitionPhase>("entering");
   const [direction, setDirection] = useState<TransitionDirection>("forward");
@@ -104,8 +105,10 @@ export default function PageTransition({ children }: { children: ReactNode }) {
       const destination = new URL(anchor.href, window.location.href);
       if (destination.origin !== window.location.origin) return;
 
-      const currentRoute = `${window.location.pathname}${window.location.search}`;
-      const nextRoute = `${destination.pathname}${destination.search}`;
+      const currentPath = stripBasePath(window.location.pathname);
+      const nextPath = stripBasePath(destination.pathname);
+      const currentRoute = `${currentPath}${window.location.search}`;
+      const nextRoute = `${nextPath}${destination.search}`;
       if (nextRoute === currentRoute) return;
 
       event.preventDefault();
@@ -119,7 +122,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
       if (exitingTo.current === href) return;
       clearTransitionTimer();
       exitingTo.current = href;
-      setDirection(getDirection(window.location.pathname, destination.pathname));
+      setDirection(getDirection(currentPath, nextPath));
       router.prefetch(href);
       setPhase("exiting");
 
