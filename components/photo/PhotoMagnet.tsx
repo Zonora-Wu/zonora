@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type { PhotoItem } from "@/data/photoRegions";
 
@@ -14,6 +14,12 @@ type PhotoMagnetProps = {
   position?: Position;
   zIndex?: number;
   index: number;
+  layout?: {
+    x: number;
+    y: number;
+    rotate: number;
+    scale: number;
+  };
   onCommitPosition: (photoId: string, position: Position) => void;
   onRaise: (photoId: string) => void;
   onOpen: (photo: PhotoItem) => void;
@@ -43,12 +49,24 @@ function getWallRect(element: HTMLElement) {
   return wall?.getBoundingClientRect() ?? element.getBoundingClientRect();
 }
 
-export default function PhotoMagnet({ photo, position, zIndex, index, onCommitPosition, onRaise, onOpen }: PhotoMagnetProps) {
+export default function PhotoMagnet({ photo, position, zIndex, index, layout, onCommitPosition, onRaise, onOpen }: PhotoMagnetProps) {
   const magnetRef = useRef<HTMLButtonElement>(null);
   const pressState = useRef<PressState | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const basePosition = position ?? { x: photo.layout.x, y: photo.layout.y };
+  const basePosition = position ?? { x: layout?.x ?? photo.layout.x, y: layout?.y ?? photo.layout.y };
+
+  // Percentage dimensions for overlap detection (relative to wall)
+  const dimPctW = useMemo(() => {
+    if (!layout) return 0.16 * (photo.layout.scale ?? 1);
+    return 0.16 * layout.scale;
+  }, [layout, photo]);
+
+  const dimPctH = useMemo(() => {
+    if (!layout) return 0.1 * (photo.layout.scale ?? 1);
+    const aspect = photo.width / photo.height;
+    return (0.16 * layout.scale) / aspect;
+  }, [layout, photo]);
 
   const setLivePosition = useCallback((next: Position) => {
     const magnet = magnetRef.current;
@@ -80,7 +98,7 @@ export default function PhotoMagnet({ photo, position, zIndex, index, onCommitPo
 
     const magnet = event.currentTarget;
     const wallRect = getWallRect(magnet);
-    const currentPosition = position ?? { x: photo.layout.x, y: photo.layout.y };
+    const currentPosition = position ?? { x: layout?.x ?? photo.layout.x, y: layout?.y ?? photo.layout.y };
     const currentLeft = (currentPosition.x / 100) * wallRect.width;
     const currentTop = (currentPosition.y / 100) * wallRect.height;
 
@@ -100,7 +118,7 @@ export default function PhotoMagnet({ photo, position, zIndex, index, onCommitPo
 
     state.timerId = window.setTimeout(() => enterDragMode(), LONG_PRESS_MS);
     pressState.current = state;
-  }, [enterDragMode, onRaise, photo.id, photo.layout.x, photo.layout.y, position]);
+  }, [enterDragMode, onRaise, photo.id, photo.layout.x, photo.layout.y, layout?.x, layout?.y, position]);
 
   const handlePointerMove = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     const state = pressState.current;
@@ -170,8 +188,10 @@ export default function PhotoMagnet({ photo, position, zIndex, index, onCommitPo
       style={{
         "--photo-x": `${basePosition.x}%`,
         "--photo-y": `${basePosition.y}%`,
-        "--photo-rotate": `${photo.layout.rotate}deg`,
-        "--photo-scale": photo.layout.scale ?? 1,
+        "--photo-rotate": `${layout?.rotate ?? photo.layout.rotate}deg`,
+        "--photo-scale": layout?.scale ?? photo.layout.scale ?? 1,
+        "--photo-dim-pct-w": `${dimPctW}%`,
+        "--photo-dim-pct-h": `${dimPctH}%`,
         "--photo-z": zIndex ?? photo.layout.z ?? index + 2,
         "--photo-enter-delay": `${index * 90}ms`,
       } as CSSProperties}

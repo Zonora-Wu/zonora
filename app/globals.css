@@ -1842,10 +1842,10 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 .photo-magnet {
   --photo-scale: 1;
   --photo-width: clamp(10.5rem, 17vw, 15.6rem);
+  --photo-dim-pct-w: 0.16;
+  --photo-dim-pct-h: 0.1;
   position: absolute;
   z-index: var(--photo-z);
-  left: var(--photo-x);
-  top: var(--photo-y);
   width: var(--photo-width);
   border: 0;
   background: transparent;
@@ -1853,7 +1853,7 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   cursor: grab;
   touch-action: none;
   pointer-events: auto;
-  transform: rotate(var(--photo-rotate)) scale(var(--photo-scale));
+  transform: translate3d(var(--photo-x), var(--photo-y), 0) rotate(var(--photo-rotate)) scale(var(--photo-scale));
   transform-origin: 50% 12%;
   opacity: 0;
   animation: photo-magnet-drop 740ms cubic-bezier(0.16, 1, 0.3, 1) var(--photo-enter-delay) forwards;

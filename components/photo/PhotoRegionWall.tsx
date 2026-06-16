@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PhotoItem, PhotoRegion } from "@/data/photoRegions";
 import PhotoMagnet from "@/components/photo/PhotoMagnet";
 import PhotoLightbox from "@/components/photo/PhotoLightbox";
+import { generatePhotoLayout, balancedTwoRows } from "@/utils/photoLayout";
+import type { PhotoLayoutResult } from "@/utils/photoLayout";
 
 type Position = {
   x: number;
@@ -24,6 +26,7 @@ type WallDragState = {
 
 const WALL_LONG_PRESS_MS = 220;
 const WALL_SWITCH_DISTANCE = 90;
+const RESIZE_DEBOUNCE_MS = 300;
 
 function wrapIndex(index: number, length: number) {
   return (index + length) % length;
@@ -31,11 +34,13 @@ function wrapIndex(index: number, length: number) {
 
 export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
   const wallDrag = useRef<WallDragState | null>(null);
-  const nextPhotoZ = useRef(100);
-  const [regionIndex, setRegionIndex] = useState(0);
-  const [positions, setPositions] = useState<Record<string, Position>>({});
-  const [photoZLayers, setPhotoZLayers] = useState<Record<string, number>>({});
-  const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null);
+   const nextPhotoZ = useRef(100);
+   const resizeTimerRef = useRef<number>(-1);
+   const [regionIndex, setRegionIndex] = useState(0);
+   const [positions, setPositions] = useState<Record<string, Position>>({});
+   const [photoZLayers, setPhotoZLayers] = useState<Record<string, number>>({});
+   const [photoLayout, setPhotoLayout] = useState<PhotoLayoutResult[]>([]);
+   const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null);
 
   const region = regions[regionIndex];
   const photos = region.photos;
@@ -137,6 +142,54 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [goRegion, selectedPhoto]);
 
+  // Generate two-column layout on mount and resize — one region at a time
+  useEffect(() => {
+    if (photos.length === 0) return;
+
+    // Defer until after paint so .photo-wall has real dimensions
+    const rafId = requestAnimationFrame(() => {
+      const wallEl = document.querySelector(".photo-wall");
+      if (!wallEl) return;
+
+      const wallRect = wallEl.getBoundingClientRect();
+      const layout = balancedTwoRows(photos, wallRect.width, wallRect.height);
+      setPhotoLayout(layout);
+
+      // Reset drag positions when layout changes
+      setPositions({});
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [photos]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (resizeTimerRef.current !== -1) {
+        window.clearTimeout(resizeTimerRef.current);
+      }
+      resizeTimerRef.current = window.setTimeout(() => {
+        if (photos.length === 0) return;
+        // Defer until after paint for real dimensions
+        requestAnimationFrame(() => {
+          const wallEl = document.querySelector(".photo-wall");
+          if (!wallEl) return;
+          const wallRect = wallEl.getBoundingClientRect();
+          const layout = balancedTwoRows(photos, wallRect.width, wallRect.height);
+          setPhotoLayout(layout);
+          setPositions({});
+        });
+      }, RESIZE_DEBOUNCE_MS);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      if (resizeTimerRef.current !== -1) {
+        window.clearTimeout(resizeTimerRef.current);
+      }
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [photos]);
+
   return (
     <section
       className="page-section photo-page"
@@ -164,18 +217,23 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
           <div className="photo-wall__shine" />
 
           {photos.length > 0 ? (
-            photos.map((photo, index) => (
-              <PhotoMagnet
-                key={photo.id}
-                photo={photo}
-                position={positions[photo.id]}
-                zIndex={photoZLayers[photo.id]}
-                index={index}
-                onCommitPosition={updatePosition}
-                onRaise={raisePhoto}
-                onOpen={setSelectedPhoto}
-              />
-            ))
+            photos.map((photo, index) => {
+              const layoutEntry = photoLayout.find((l) => l.photoId === photo.id);
+              const layout = layoutEntry?.position;
+              return (
+                <PhotoMagnet
+                  key={photo.id}
+                  photo={photo}
+                  position={positions[photo.id]}
+                  zIndex={photoZLayers[photo.id]}
+                  index={index}
+                  layout={layout}
+                  onCommitPosition={updatePosition}
+                  onRaise={raisePhoto}
+                  onOpen={setSelectedPhoto}
+                />
+              );
+            })
           ) : (
             <div className="photo-wall-empty">
               <span>等待贴上第一张来自 {region.name} 的照片</span>
