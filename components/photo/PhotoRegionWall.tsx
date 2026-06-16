@@ -63,8 +63,9 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
     setPhotoZLayers((current) => ({ ...current, [photoId]: nextZ }));
   }, []);
 
-  const startWallDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget && !(event.target instanceof HTMLDivElement)) return;
+  const startWallDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest("button, a, input, textarea, select, [role='dialog']")) return;
     if (event.button !== 0 && event.pointerType === "mouse") return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -85,7 +86,7 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
     wallDrag.current = state;
   }, []);
 
-  const moveWallDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+  const moveWallDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
     const state = wallDrag.current;
     if (!state || state.pointerId !== event.pointerId) return;
 
@@ -99,7 +100,7 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
     event.preventDefault();
   }, []);
 
-  const finishWallDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+  const finishWallDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
     const state = wallDrag.current;
     if (!state || state.pointerId !== event.pointerId) return;
 
@@ -137,8 +138,15 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
   }, [goRegion, selectedPhoto]);
 
   return (
-    <section className="page-section photo-page" style={{ "--photo-region-accent": region.accent } as React.CSSProperties}>
-      <div className="photo-page__intro">
+    <section
+      className="page-section photo-page"
+      data-photo-region={region.id}
+      onPointerDown={startWallDrag}
+      onPointerMove={moveWallDrag}
+      onPointerUp={finishWallDrag}
+      onPointerCancel={finishWallDrag}
+    >
+      <div className="photo-page__intro container">
         <p className="art-page__eyebrow">Magnetic darkroom</p>
         <h1 className="page-title page-title--spacious">摄影</h1>
         <p className="page-lead photo-page__lead">
@@ -151,10 +159,6 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
           className="photo-wall"
           key={region.id}
           aria-label={`${region.name}摄影冰箱贴墙`}
-          onPointerDown={startWallDrag}
-          onPointerMove={moveWallDrag}
-          onPointerUp={finishWallDrag}
-          onPointerCancel={finishWallDrag}
         >
           <div className="photo-wall__grain" />
           <div className="photo-wall__shine" />

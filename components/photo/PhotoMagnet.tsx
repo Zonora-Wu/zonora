@@ -115,8 +115,8 @@ export default function PhotoMagnet({ photo, position, zIndex, index, onCommitPo
 
     const wallRect = getWallRect(event.currentTarget);
     const next = {
-      x: clamp(((event.clientX - wallRect.left - state.offsetX) / wallRect.width) * 100, -8, 94),
-      y: clamp(((event.clientY - wallRect.top - state.offsetY) / wallRect.height) * 100, -6, 88),
+      x: clamp(((event.clientX - wallRect.left - state.offsetX) / wallRect.width) * 100, -10, 96),
+      y: clamp(((event.clientY - wallRect.top - state.offsetY) / wallRect.height) * 100, -8, 96),
     };
 
     state.nextPosition = next;
