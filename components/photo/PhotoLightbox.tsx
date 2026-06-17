@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { PhotoItem } from "@/data/photoRegions";
 
@@ -13,15 +13,97 @@ type PhotoLightboxProps = {
   onNext: () => void;
 };
 
+const MODAL_EXIT_MS = 440;
+const MODAL_ENTER_MS = 500;
+
+type ModalTransition = {
+  to: PhotoItem;
+  direction: "prev" | "next";
+  phase: "exit" | "enter";
+  key: number;
+};
+
+function useReducedMotion() {
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setReducedMotion(query.matches);
+
+    updatePreference();
+    query.addEventListener("change", updatePreference);
+
+    return () => query.removeEventListener("change", updatePreference);
+  }, []);
+
+  return reducedMotion;
+}
+
 export default function PhotoLightbox({ photo, regionName, hasNavigation, onClose, onPrev, onNext }: PhotoLightboxProps) {
+  const reducedMotion = useReducedMotion();
+  const [modalTransition, setModalTransition] = useState<ModalTransition | null>(null);
+  const modalTransitionKey = useRef(0);
+
+  useEffect(() => {
+    if (!modalTransition) return;
+
+    const timeout = window.setTimeout(() => {
+      if (modalTransition.phase === "exit") {
+        if (modalTransition.direction === "prev") {
+          onPrev();
+        } else {
+          onNext();
+        }
+        setModalTransition({ ...modalTransition, phase: "enter" });
+        return;
+      }
+
+      setModalTransition(null);
+    }, modalTransition.phase === "exit" ? MODAL_EXIT_MS : MODAL_ENTER_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [modalTransition, onPrev, onNext]);
+
+  const handlePrev = useCallback(() => {
+    if (modalTransition) return;
+
+    if (reducedMotion) {
+      onPrev();
+      return;
+    }
+
+    setModalTransition({
+      to: photo,
+      direction: "prev",
+      phase: "exit",
+      key: ++modalTransitionKey.current,
+    });
+  }, [modalTransition, photo, onPrev, reducedMotion]);
+
+  const handleNext = useCallback(() => {
+    if (modalTransition) return;
+
+    if (reducedMotion) {
+      onNext();
+      return;
+    }
+
+    setModalTransition({
+      to: photo,
+      direction: "next",
+      phase: "exit",
+      key: ++modalTransitionKey.current,
+    });
+  }, [modalTransition, photo, onNext, reducedMotion]);
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
-      if (event.key === "ArrowLeft" && hasNavigation) onPrev();
-      if (event.key === "ArrowRight" && hasNavigation) onNext();
+      if (event.key === "ArrowLeft" && hasNavigation) handlePrev();
+      if (event.key === "ArrowRight" && hasNavigation) handleNext();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -30,7 +112,30 @@ export default function PhotoLightbox({ photo, regionName, hasNavigation, onClos
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [hasNavigation, onClose, onNext, onPrev]);
+  }, [hasNavigation, onClose, handlePrev, handleNext]);
+
+  const renderImage = useCallback((p: PhotoItem, className: string) => {
+    if (p.src) {
+      return (
+        <img
+          className={className}
+          src={p.src}
+          width={p.width}
+          height={p.height}
+          alt={p.title}
+          decoding="async"
+          draggable={false}
+        />
+      );
+    }
+    return (
+      <div className="photo-lightbox__empty">
+        <span>{regionName}</span>
+        <strong>{p.title}</strong>
+        <p>把真实摄影图片放入 public/photos 后，在 data/photoRegions.ts 中填写 src 即可显示。</p>
+      </div>
+    );
+  }, [regionName]);
 
   return createPortal(
     <div
@@ -47,21 +152,31 @@ export default function PhotoLightbox({ photo, regionName, hasNavigation, onClos
       <div className="art-modal__panel photo-lightbox__panel" onClick={(event) => event.stopPropagation()}>
         <div className="art-modal__stage">
           <div className="art-modal__frame">
-            {photo.src ? (
-              <img
-                className="art-modal__image photo-lightbox__image"
-                src={photo.src}
-                width={photo.width}
-                height={photo.height}
-                alt={photo.title}
-                decoding="async"
-                draggable={false}
-              />
+            {modalTransition?.phase === "exit" ? (
+              <div
+                key={`exit-${modalTransition.key}`}
+                className={`art-modal__image art-modal__image--exit-flow art-modal__image--exit-${modalTransition.direction}`}
+              >
+                {renderImage(
+                  modalTransition.to,
+                  "photo-lightbox__image"
+                )}
+              </div>
+            ) : null}
+
+            {modalTransition?.phase === "enter" ? (
+              <div
+                key={`enter-${modalTransition.key}`}
+                className={`art-modal__image art-modal__image--enter art-modal__image--enter-${modalTransition.direction}`}
+              >
+                {renderImage(
+                  photo,
+                  "photo-lightbox__image"
+                )}
+              </div>
             ) : (
-              <div className="photo-lightbox__empty">
-                <span>{regionName}</span>
-                <strong>{photo.title}</strong>
-                <p>把真实摄影图片放入 public/photos 后，在 data/photoRegions.ts 中填写 src 即可显示。</p>
+              <div className="art-modal__image">
+                {renderImage(photo, "photo-lightbox__image")}
               </div>
             )}
 
@@ -70,7 +185,7 @@ export default function PhotoLightbox({ photo, regionName, hasNavigation, onClos
                 <button
                   type="button"
                   className="art-modal__nav art-modal__nav--prev"
-                  onClick={(event) => { event.stopPropagation(); onPrev(); }}
+                  onClick={(event) => { event.stopPropagation(); handlePrev(); }}
                   aria-label="上一张"
                 >
                   ←
@@ -78,7 +193,7 @@ export default function PhotoLightbox({ photo, regionName, hasNavigation, onClos
                 <button
                   type="button"
                   className="art-modal__nav art-modal__nav--next"
-                  onClick={(event) => { event.stopPropagation(); onNext(); }}
+                  onClick={(event) => { event.stopPropagation(); handleNext(); }}
                   aria-label="下一张"
                 >
                   →
