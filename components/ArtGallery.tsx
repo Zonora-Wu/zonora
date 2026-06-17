@@ -176,8 +176,15 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
-    const segmentWidth = scroller.scrollWidth / REPEAT;
-    scroller.scrollLeft = segmentWidth;
+    // Native wheel listener with passive:false to guarantee preventDefault works
+    // Only prevents default (stops page scroll) — event still bubbles to React onWheel on shell for actual scrolling
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+    };
+
+    scroller.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => scroller.removeEventListener("wheel", onWheel);
   }, []);
 
   // flat ordered list for prev/next navigation
@@ -244,8 +251,11 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
-    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-    if (delta === 0) return;
+    // Normalize delta to pixel values (handle deltaMode: 0=pixel, 1=line, 2=page)
+    const rawX = event.deltaMode === 0 ? event.deltaX : event.deltaX * 100;
+    const rawY = event.deltaMode === 0 ? event.deltaY : event.deltaY * 100;
+    const delta = Math.abs(rawX) > Math.abs(rawY) ? rawX : rawY;
+    if (Math.abs(delta) < 1) return;
 
     const scrollDelta = delta * 0.6;
     scroller.scrollLeft += scrollDelta;
