@@ -1853,7 +1853,9 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   cursor: grab;
   touch-action: none;
   pointer-events: auto;
-  transform: translate3d(var(--photo-x), var(--photo-y), 0) rotate(var(--photo-rotate)) scale(var(--photo-scale));
+  left: var(--photo-x);
+  top: var(--photo-y);
+  transform: rotate(var(--photo-rotate)) scale(var(--photo-scale));
   transform-origin: 50% 12%;
   opacity: 0;
   animation: photo-magnet-drop 740ms cubic-bezier(0.16, 1, 0.3, 1) var(--photo-enter-delay) forwards;

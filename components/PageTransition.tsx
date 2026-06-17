@@ -141,7 +141,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
       data-transition-phase={phase}
       data-transition-direction={direction}
     >
-      <div className={`page-transition-view ${pathname === "/home" ? "page-transition-view--home" : ""}`} key={pathname}>
+      <div className={`page-transition-view ${pathname === "/home" || pathname === "/home/" ? "page-transition-view--home" : ""}`} key={pathname}>
         {children}
       </div>
     </main>

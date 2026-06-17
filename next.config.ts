@@ -6,15 +6,6 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: true,
-  async redirects() {
-    return [
-      {
-        source: "/home",
-        destination: "/home/",
-        permanent: false,
-      },
-    ];
-  },
 };
 
 export default nextConfig;
