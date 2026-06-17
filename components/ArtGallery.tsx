@@ -250,6 +250,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     const scrollDelta = delta * 0.6;
     scroller.scrollLeft += scrollDelta;
     event.preventDefault();
+    event.stopPropagation();
   }, []);
 
   const handleMouseMove = useCallback((event: MouseEvent<HTMLButtonElement>) => {
@@ -308,11 +309,10 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
         <span className="art-gallery__hint">在画作区域滚动鼠标滚轮横向浏览 · 点击查看大图</span>
       </div>
 
-      <div className="art-gallery__shell">
+      <div className="art-gallery__shell" onWheel={handleWheel}>
         <div
           ref={scrollerRef}
           className="art-gallery__scroller"
-          onWheel={handleWheel}
           onScroll={handleScroll}
           aria-label="横向滚动画廊"
         >

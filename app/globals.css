@@ -1052,7 +1052,7 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 
 .art-gallery__scroller {
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: scroll;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   outline: none;
