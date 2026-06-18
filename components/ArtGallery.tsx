@@ -89,6 +89,12 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
   const isResetting = useRef(false);
   const [mounted, setMounted] = useState(false);
 
+  // --- Auto-scroll: slow leftward continuous loop, decelerates on click/key ---
+  const activeRef = useRef(true);
+  const speedRef = useRef(0.3); // px/frame at 60fps ≈ 18px/s
+  const decelRef = useRef<number | null>(null);
+  const userPausedRef = useRef(false);
+
   const closeModal = useCallback(() => {
     setSelectedSketch(null);
     setModalTransition(null);
@@ -127,6 +133,101 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // --- Auto-scroll: slow leftward continuous loop ---
+  const autoScroll = useCallback(() => {
+    if (!activeRef.current) return;
+
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    scroller.scrollLeft += speedRef.current;
+
+    // Handle infinite loop wrap — if auto-scroll pushes past right edge
+    const segmentWidth = scroller.scrollWidth / REPEAT;
+    if (scroller.scrollLeft > segmentWidth * 2.8) {
+      scroller.scrollLeft = segmentWidth / 2;
+    }
+
+    decelRef.current = requestAnimationFrame(autoScroll);
+  }, []);
+
+  const stopAutoScroll = useCallback(() => {
+    activeRef.current = false;
+    if (decelRef.current !== null) {
+      cancelAnimationFrame(decelRef.current);
+      decelRef.current = null;
+    }
+    // Gradual deceleration — speed drops ~5% per frame
+    const decay = () => {
+      if (speedRef.current <= 0.01) {
+        speedRef.current = 0;
+        return;
+      }
+      speedRef.current *= 0.95;
+      decelRef.current = requestAnimationFrame(decay);
+    };
+    decelRef.current = requestAnimationFrame(decay);
+  }, []);
+
+  // Start auto-scroll animation when mounted
+  useEffect(() => {
+    if (reducedMotion) return;
+    activeRef.current = true;
+    speedRef.current = 0.3; // px/frame at 60fps ≈ 18px/s
+    decelRef.current = requestAnimationFrame(autoScroll);
+
+    return () => {
+      activeRef.current = false;
+      if (decelRef.current !== null) {
+        cancelAnimationFrame(decelRef.current);
+        decelRef.current = null;
+      }
+    };
+  }, [reducedMotion, autoScroll]);
+
+  // Stop on click on the scroller
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const onClick = () => {
+      stopAutoScroll();
+    };
+    scroller.addEventListener("click", onClick, { once: false });
+    return () => scroller.removeEventListener("click", onClick);
+  }, [stopAutoScroll]);
+
+  // Stop on any keyboard press
+  useEffect(() => {
+    const onKeyDown = () => {
+      stopAutoScroll();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [stopAutoScroll]);
+
+  // Restart when page becomes visible (navigating back, tab switch)
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        if (!userPausedRef.current) {
+          activeRef.current = true;
+          speedRef.current = 0.3;
+          if (decelRef.current !== null) {
+            cancelAnimationFrame(decelRef.current);
+            decelRef.current = null;
+          }
+          decelRef.current = requestAnimationFrame(autoScroll);
+        }
+      } else {
+        userPausedRef.current = true;
+        activeRef.current = false;
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [autoScroll]);
 
   const { topRow, bottomRow } = useMemo(() => {
     if (!mounted) {
