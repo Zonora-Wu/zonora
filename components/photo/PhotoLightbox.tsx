@@ -13,8 +13,7 @@ type PhotoLightboxProps = {
   onNext: () => void;
 };
 
-const MODAL_EXIT_MS = 440;
-const MODAL_ENTER_MS = 500;
+const MODAL_UNIFIED_MS = 500;
 
 type ModalTransition = {
   to: PhotoItem;
@@ -59,7 +58,7 @@ export default function PhotoLightbox({ photo, regionName, hasNavigation, onClos
       }
 
       setModalTransition(null);
-    }, modalTransition.phase === "exit" ? MODAL_EXIT_MS : MODAL_ENTER_MS);
+    }, MODAL_UNIFIED_MS);
 
     return () => window.clearTimeout(timeout);
   }, [modalTransition, onPrev, onNext]);
@@ -153,26 +152,26 @@ export default function PhotoLightbox({ photo, regionName, hasNavigation, onClos
         <div className="art-modal__stage">
           <div className="art-modal__frame">
             {modalTransition?.phase === "exit" ? (
-              <div
-                key={`exit-${modalTransition.key}`}
-                className={`art-modal__image art-modal__image--exit-flow art-modal__image--exit-${modalTransition.direction}`}
-              >
-                {renderImage(
-                  modalTransition.to,
-                  "photo-lightbox__image"
-                )}
-              </div>
-            ) : null}
-
-            {modalTransition?.phase === "enter" ? (
+              <>
+                <div
+                  key={`exit-${modalTransition.key}`}
+                  className={`art-modal__image art-modal__image--exit-flow art-modal__image--exit-${modalTransition.direction} art-modal__image--unified-duration`}
+                >
+                  {renderImage(modalTransition.to, "photo-lightbox__image")}
+                </div>
+                <div
+                  key={`enter-${modalTransition.key}`}
+                  className={`art-modal__image art-modal__image--enter art-modal__image--enter-${modalTransition.direction}`}
+                >
+                  {renderImage(photo, "photo-lightbox__image")}
+                </div>
+              </>
+            ) : modalTransition?.phase === "enter" ? (
               <div
                 key={`enter-${modalTransition.key}`}
                 className={`art-modal__image art-modal__image--enter art-modal__image--enter-${modalTransition.direction}`}
               >
-                {renderImage(
-                  photo,
-                  "photo-lightbox__image"
-                )}
+                {renderImage(photo, "photo-lightbox__image")}
               </div>
             ) : (
               <div className="art-modal__image">

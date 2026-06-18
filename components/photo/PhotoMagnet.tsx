@@ -53,6 +53,7 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
   const magnetRef = useRef<HTMLButtonElement>(null);
   const pressState = useRef<PressState | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [animationDone, setAnimationDone] = useState(false);
 
   const basePosition = position ?? { x: layout?.x ?? photo.layout.x, y: layout?.y ?? photo.layout.y };
 
@@ -159,10 +160,12 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
     const wasDragging = state.dragging;
     const nextPosition = state.nextPosition;
     pressState.current = null;
-    setIsDragging(false);
 
     if (wasDragging) {
+      // Update position to final value first, then clear dragging state so
+      // the CSS transition animates from the dragged position smoothly.
       setLivePosition(nextPosition);
+      requestAnimationFrame(() => setIsDragging(false));
       onCommitPosition(photo.id, nextPosition);
       return;
     }
@@ -184,7 +187,7 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
     <button
       ref={magnetRef}
       type="button"
-      className={`photo-magnet photo-magnet--${photo.layout.variant} ${isDragging ? "photo-magnet--dragging" : ""}`}
+      className={`photo-magnet photo-magnet--${photo.layout.variant}${animationDone && !isDragging ? " photo-magnet--done" : ""}${isDragging ? " photo-magnet--dragging" : ""}`}
       style={{
         "--photo-x": `${basePosition.x}%`,
         "--photo-y": `${basePosition.y}%`,
@@ -199,6 +202,7 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
       onPointerMove={handlePointerMove}
       onPointerUp={finishPointer}
       onPointerCancel={finishPointer}
+      onAnimationEnd={() => setAnimationDone(true)}
       aria-label={`查看照片 ${photo.title}`}
     >
       <span className="photo-magnet__fixture" aria-hidden="true" />

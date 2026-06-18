@@ -66,6 +66,8 @@ export function balancedTwoRows(
       const jitterY = (Math.random() - 0.5) * 1.5; // ±0.75%
       // Stronger tilt: ±4° instead of ±2°
       const rotate = (Math.random() - 0.5) * 8; // ±4° tilt
+      // Varied scale for staggered visual — photos appear at different sizes
+      const scale = 0.9 + Math.random() * 0.15; // 0.9 ~ 1.3
 
       results.push({
         photoId: photo.id,
@@ -73,7 +75,7 @@ export function balancedTwoRows(
           x: baseX + jitterX,
           y: baseY + jitterY,
           rotate,
-          scale: 1,
+          scale,
         },
         overlapCount: 0,
       });

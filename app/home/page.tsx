@@ -36,14 +36,6 @@ export default function HomePage() {
       <GlobeSceneWrapper />
       <div className="home-content">
         <TypewriterTitle />
-
-        {!revealed && (
-          <div className="home-prompt-wrap">
-            <span className="home-prompt">
-              PRESS ANY KEY
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );
