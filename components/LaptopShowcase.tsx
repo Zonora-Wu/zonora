@@ -280,16 +280,18 @@ function ExrEnvironment({ exposure }: { exposure: number }) {
           pmrem.dispose()
           texture.dispose()
           cachedPMREM = envMap
+          scene.environment = envMap  // ✅ 生成后设置到场景
           pmremGenerating = false
         })
         .catch((err) => {
           console.error('Failed to generate PMREM from EXR:', err)
           pmremGenerating = false
         })
+    } else {
+      // ✅ 已缓存则直接设置
+      scene.environment = cachedPMREM
     }
 
-    // Assign cached PMREM to scene — reuse across all Canvas remounts
-    scene.environment = cachedPMREM
     scene.environmentRotation.y = THREE.MathUtils.degToRad(ENVIRONMENT_ROTATION_Y_DEGREES)
 
     return () => {

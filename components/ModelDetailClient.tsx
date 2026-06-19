@@ -23,6 +23,7 @@ export default function ModelDetailClient({
       <Link
         href="/models"
         style={{ color: "var(--muted)", fontSize: "0.9rem", display: "inline-block", marginBottom: "1.5rem" }}
+        suppressHydrationWarning
       >
         ← 返回模型库
       </Link>
@@ -55,6 +56,7 @@ export default function ModelDetailClient({
               opacity: 0.3,
               transition: "opacity 0.2s",
             }}
+            suppressHydrationWarning
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.3")}
           />
@@ -74,7 +76,7 @@ export default function ModelDetailClient({
             <h1 style={{ fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "0.75rem" }}>
               {model.name}
             </h1>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", lineHeight: 1.65 }}>
+            <p style={{ color: "var(--muted)", fontSize: "0.9rem", lineHeight: 1.65 }} suppressHydrationWarning>
               {model.description}
             </p>
 
@@ -84,13 +86,13 @@ export default function ModelDetailClient({
               ))}
             </div>
 
-            <dl style={{ marginTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "0.75rem" }}>
+            <dl style={{ marginTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "0.75rem" }} suppressHydrationWarning>
               {model.details.map((d) => (
                 <div
                   key={d.label}
                   style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", fontSize: "0.85rem" }}
                 >
-                  <dt style={{ color: "var(--muted)" }}>{d.label}</dt>
+                  <dt style={{ color: "var(--muted)" }} suppressHydrationWarning>{d.label}</dt>
                   <dd style={{ fontWeight: 500 }}>{d.value}</dd>
                 </div>
               ))}

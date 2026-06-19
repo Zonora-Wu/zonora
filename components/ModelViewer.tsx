@@ -1,11 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { Canvas, useLoader } from "@react-three/fiber";
-import { OrbitControls, Environment, ContactShadows, Html } from "@react-three/drei";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { Canvas, useLoader, useThree } from "@react-three/fiber";
+import { OrbitControls, ContactShadows, Html } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import type { Group } from "three";
-import { Box3, Vector3 } from "three";
+import { Box3, Vector3, PMREMGenerator, LinearSRGBColorSpace } from "three";
+
+const HDR_ENV_URL = "/hdr/sunset_2K_65d6cbb9-5c06-44f8-9be3-41df7a99f52a.exr";
 
 /* ---- 模型加载与自动居中 ---- */
 function Model({ url }: { url: string }) {
@@ -51,6 +54,36 @@ function Loader() {
   );
 }
 
+/* ---- HDR 环境贴图加载 ---- */
+function HDRScene() {
+  const { scene, gl } = useThree();
+  const loaded = useRef(false);
+
+  useEffect(() => {
+    if (loaded.current) return;
+    loaded.current = true;
+
+    const pmrem = new PMREMGenerator(gl);
+    pmrem.compileEquirectangularShader();
+
+    new RGBELoader()
+      .setPath("/")
+      .load(HDR_ENV_URL, (texture) => {
+        texture.colorSpace = LinearSRGBColorSpace;
+        const envMap = pmrem.fromEquirectangular(texture).texture;
+        scene.environment = envMap;
+        texture.dispose();
+        pmrem.dispose();
+      })
+      .onError(() => {
+        // Fallback: use a dim warm environment if HDR file fails
+        scene.environmentIntensity = 1.0;
+      });
+  }, [scene, gl]);
+
+  return null;
+}
+
 /* ---- 主组件 ---- */
 export default function ModelViewer({
   modelPath,
@@ -89,8 +122,8 @@ export default function ModelViewer({
           {/* 地面阴影 */}
           <ContactShadows position={[0, -1.5, 0]} opacity={0.35} scale={8} blur={2.5} far={4} />
 
-          {/* 环境光 */}
-          <Environment preset="studio" />
+          {/* HDR 环境贴图（替代 drei Environment preset） */}
+          <HDRScene />
         </Suspense>
 
         {/* 操控 */}
