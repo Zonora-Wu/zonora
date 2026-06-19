@@ -161,51 +161,38 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [goRegion, selectedPhoto]);
 
-  // Generate two-column layout on mount and resize — one region at a time
+  // Generate layout on mount and on resize
   useEffect(() => {
     if (photos.length === 0) return;
 
-    // Defer until after paint so .photo-wall has real dimensions
-    const rafId = requestAnimationFrame(() => {
-      const wallEl = document.querySelector(".photo-wall");
-      if (!wallEl) return;
+    const wallEl = document.querySelector(".photo-wall");
+    if (!wallEl) return;
 
-      const wallRect = wallEl.getBoundingClientRect();
-      const layout = balancedTwoRows(photos, wallRect.width, wallRect.height);
-      setPhotoLayout(layout);
+    // Use ResizeObserver for precise resize detection on the wall element
+    // ResizeObserver fires immediately when observing, so we use it for both
+    // initial layout and subsequent resize events
+    const observer = new ResizeObserver((entries) => {
+      // Clear pending layout computation
+      if (resizeTimerRef.current !== -1) {
+        window.clearTimeout(resizeTimerRef.current);
+      }
 
-      // Reset drag positions when layout changes
-      setPositions({});
+      resizeTimerRef.current = window.setTimeout(() => {
+        const entry = entries[0];
+        if (!entry) return;
+        const { width, height } = entry.contentRect;
+        const layout = balancedTwoRows(photos, width, height);
+        setPhotoLayout(layout);
+        setPositions({});
+      }, RESIZE_DEBOUNCE_MS);
     });
 
-    return () => cancelAnimationFrame(rafId);
-  }, [photos]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (resizeTimerRef.current !== -1) {
-        window.clearTimeout(resizeTimerRef.current);
-      }
-      resizeTimerRef.current = window.setTimeout(() => {
-        if (photos.length === 0) return;
-        // Defer until after paint for real dimensions
-        requestAnimationFrame(() => {
-          const wallEl = document.querySelector(".photo-wall");
-          if (!wallEl) return;
-          const wallRect = wallEl.getBoundingClientRect();
-          const layout = balancedTwoRows(photos, wallRect.width, wallRect.height);
-          setPhotoLayout(layout);
-          setPositions({});
-        });
-      }, RESIZE_DEBOUNCE_MS);
-    };
-
-    window.addEventListener("resize", handleResize);
+    observer.observe(wallEl);
     return () => {
+      observer.disconnect();
       if (resizeTimerRef.current !== -1) {
         window.clearTimeout(resizeTimerRef.current);
       }
-      window.removeEventListener("resize", handleResize);
     };
   }, [photos]);
 

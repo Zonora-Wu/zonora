@@ -1056,6 +1056,9 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   outline: none;
+  /* Smooth scroll-snap for infinite loop with REPEAT=2 */
+  scroll-snap-type: x proximity;
+  scroll-behavior: smooth;
 }
 
 .art-gallery__scroller::-webkit-scrollbar {

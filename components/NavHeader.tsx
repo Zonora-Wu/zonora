@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -40,6 +40,7 @@ export default function NavHeader() {
     }
   }, [isHome, revealed]);
 
+  // 全局 prefetch 所有导航链接（idle callback）
   useEffect(() => {
     const prefetchAll = () => {
       navItems.forEach((item) => router.prefetch(item.href));
@@ -56,6 +57,11 @@ export default function NavHeader() {
 
     const timer = window.setTimeout(prefetchAll, 300);
     return () => window.clearTimeout(timer);
+  }, [router]);
+
+  // Memoized prefetch handler — avoids creating new closures on every render
+  const handlePrefetch = useCallback((href: string) => {
+    router.prefetch(href);
   }, [router]);
 
   useEffect(() => {
@@ -86,8 +92,6 @@ export default function NavHeader() {
         href="/home"
         className="logo"
         prefetch
-        onPointerEnter={() => router.prefetch("/home")}
-        onFocus={() => router.prefetch("/home")}
       >
         Zonora
       </Link>
@@ -97,9 +101,8 @@ export default function NavHeader() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                prefetch
-                onPointerEnter={() => router.prefetch(item.href)}
-                onFocus={() => router.prefetch(item.href)}
+                onPointerEnter={() => handlePrefetch(item.href)}
+                onFocus={() => handlePrefetch(item.href)}
               >
                 {t(item.key)}
               </Link>

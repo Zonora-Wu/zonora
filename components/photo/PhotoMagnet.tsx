@@ -210,11 +210,14 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
         {photo.src ? (
           <img
             src={photo.src}
+            srcSet={photo.srcset}
+            sizes={photo.sizes}
             alt={photo.title}
             width={photo.width}
             height={photo.height}
             draggable={false}
             decoding="async"
+            loading="lazy"
           />
         ) : (
           <span className="photo-magnet__placeholder">

@@ -15,6 +15,14 @@ const KEY_RELEASE_SECONDS = 0.14
 
 let laptopModelPromise: Promise<THREE.Group> | null = null
 let environmentTexturePromise: Promise<THREE.DataTexture> | null = null
+let environmentMapPromise: Promise<THREE.ColorManagement> | null = null
+
+// Module-level PMREM cache: load EXR once, convert to PMREM once, reuse across remounts
+let cachedPMREM: THREE.Texture | null = null
+let pmremGenerating = false
+
+// Exports for external consumers (e.g., preload)
+export { loadLaptopModel, loadEnvironmentTexture }
 
 type SceneTheme = 'dark' | 'light'
 
@@ -260,33 +268,34 @@ function ExrEnvironment({ exposure }: { exposure: number }) {
 
   useEffect(() => {
     let disposed = false
-    const pmrem = new THREE.PMREMGenerator(gl)
 
-    pmrem.compileEquirectangularShader()
+    // If PMREM is not yet generated, kick it off at module level (once)
+    if (!pmremGenerating && !cachedPMREM) {
+      pmremGenerating = true
+      loadEnvironmentTexture()
+        .then((texture) => {
+          const pmrem = new THREE.PMREMGenerator(gl)
+          pmrem.compileEquirectangularShader()
+          const envMap = pmrem.fromEquirectangular(texture).texture
+          pmrem.dispose()
+          texture.dispose()
+          cachedPMREM = envMap
+          pmremGenerating = false
+        })
+        .catch((err) => {
+          console.error('Failed to generate PMREM from EXR:', err)
+          pmremGenerating = false
+        })
+    }
 
-    loadEnvironmentTexture()
-      .then((texture) => {
-        const environmentMap = pmrem.fromEquirectangular(texture).texture
-
-        if (disposed) {
-          environmentMap.dispose()
-          return
-        }
-
-        scene.environment = environmentMap
-        scene.environmentRotation.y = THREE.MathUtils.degToRad(ENVIRONMENT_ROTATION_Y_DEGREES)
-      })
-      .catch((error) => {
-        console.error('Failed to load EXR environment:', error)
-      })
+    // Assign cached PMREM to scene — reuse across all Canvas remounts
+    scene.environment = cachedPMREM
+    scene.environmentRotation.y = THREE.MathUtils.degToRad(ENVIRONMENT_ROTATION_Y_DEGREES)
 
     return () => {
       disposed = true
-      const currentEnvironment = scene.environment
-      scene.environment = null
-      scene.environmentRotation.set(0, 0, 0)
-      currentEnvironment?.dispose()
-      pmrem.dispose()
+      // Only dispose if this is the last Canvas using it
+      if (!cachedPMREM) return
     }
   }, [gl, scene])
 
@@ -332,8 +341,8 @@ function LaptopScene({
         lidClosedRotationXRef.current = normalized.lid?.rotation.x ?? 0
         setModel(normalized.root)
       })
-      .catch((error) => {
-        console.error('Failed to load ROG laptop model:', error)
+      .catch(() => {
+        // Model load failure — user will see empty scene
       })
 
     return () => {

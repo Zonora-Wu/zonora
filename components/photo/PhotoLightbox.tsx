@@ -119,10 +119,13 @@ export default function PhotoLightbox({ photo, regionName, hasNavigation, onClos
         <img
           className={className}
           src={p.src}
+          srcSet={p.srcset}
+          sizes={p.sizes}
+          alt={p.title}
           width={p.width}
           height={p.height}
-          alt={p.title}
           decoding="async"
+          loading="lazy"
           draggable={false}
         />
       );

@@ -23,11 +23,6 @@ function Model({ url }: { url: string }) {
       // 将模型原点移到几何中心
       gltf.scene.position.set(-center.x, -center.y, -center.z);
 
-      console.log("模型加载成功", {
-        center: center.toArray(),
-        size: size.toArray(),
-      });
-
       setReady(true);
     }
   }, [gltf]);

@@ -9,7 +9,7 @@ type ArtGalleryProps = {
   sketches: ArtSketch[];
 };
 
-const REPEAT = 3;
+const REPEAT = 2;
 const MODAL_EXIT_MS = 440;
 const MODAL_ENTER_MS = 500;
 
@@ -120,9 +120,9 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const segmentWidth = scroller.scrollWidth / REPEAT;
-    // Jump to the middle of the middle segment so the user never starts at an edge
+    // Jump to the middle of the first segment for REPEAT=2
     const currentSegment = Math.floor(scroller.scrollLeft / segmentWidth);
-    const nextLeft = currentSegment * segmentWidth + segmentWidth / 2;
+    const nextLeft = (currentSegment + 0.5) * segmentWidth;
     scroller.scrollLeft = nextLeft;
   }, []);
 
@@ -145,7 +145,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
 
     // Handle infinite loop wrap — if auto-scroll pushes past right edge
     const segmentWidth = scroller.scrollWidth / REPEAT;
-    if (scroller.scrollLeft > segmentWidth * 2.8) {
+    if (scroller.scrollLeft > segmentWidth * 1.7) {
       scroller.scrollLeft = segmentWidth / 2;
     }
 
@@ -267,7 +267,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
 
     const segmentWidth = scroller.scrollWidth / REPEAT;
     isResetting.current = true;
-    scroller.scrollLeft = segmentWidth + (scroller.scrollLeft % segmentWidth);
+    scroller.scrollLeft = segmentWidth * 0.5 + (scroller.scrollLeft % segmentWidth);
     requestAnimationFrame(() => {
       isResetting.current = false;
     });
@@ -337,11 +337,11 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     const segmentWidth = scroller.scrollWidth / REPEAT;
     const pos = scroller.scrollLeft;
 
-    if (pos < segmentWidth * 0.45) {
+    if (pos < segmentWidth * 0.3) {
       isResetting.current = true;
       scroller.scrollLeft = pos + segmentWidth;
       isResetting.current = false;
-    } else if (pos > segmentWidth * 2.55) {
+    } else if (pos > segmentWidth * 1.7) {
       isResetting.current = true;
       scroller.scrollLeft = pos - segmentWidth;
       isResetting.current = false;
