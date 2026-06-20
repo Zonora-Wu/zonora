@@ -33,6 +33,7 @@ export default function NavHeader() {
   const router = useRouter();
   const isHome = pathname === "/home";
   const [revealed, setRevealed] = useState(_navRevealed);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { t } = useLang();
 
   // 不在首页时导航栏始终显示
@@ -44,6 +45,51 @@ export default function NavHeader() {
       window.dispatchEvent(new CustomEvent("nav-revealed"));
     }
   }, [isHome, revealed]);
+
+  useEffect(() => {
+    const centerActiveLink = () => {
+      const activeLink = document.querySelector<HTMLElement>(".nav__link--active");
+      const nav = activeLink?.closest<HTMLElement>(".nav");
+      if (!activeLink || !nav || nav.scrollWidth <= nav.clientWidth) return;
+
+      const activeItem = activeLink.parentElement;
+      const itemLeft = activeItem?.offsetLeft ?? activeLink.offsetLeft;
+      const itemWidth = activeItem?.offsetWidth ?? activeLink.offsetWidth;
+      nav.scrollLeft = itemLeft - (nav.clientWidth - itemWidth) / 2;
+    };
+
+    centerActiveLink();
+    const timer = window.setTimeout(centerActiveLink, 150);
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".webgl-glass-header, .mobile-nav-orb")) return;
+      setMobileNavOpen(false);
+    };
+    const closeOnScroll = () => setMobileNavOpen(false);
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNavOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    window.addEventListener("scroll", closeOnScroll, { passive: true });
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      window.removeEventListener("scroll", closeOnScroll);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobileNavOpen]);
 
   // 全局 prefetch 所有导航链接（idle callback）
   useEffect(() => {
@@ -90,35 +136,59 @@ export default function NavHeader() {
   }, [isHome, revealed]);
 
   return (
-    <header
-      className={`header container home-header webgl-glass-header ${visible ? "home-header--revealed" : "home-header--hidden"}`}
-    >
-      <Link
-        href="/home"
-        className="logo"
-        prefetch
+    <>
+      <header
+        className={`header container home-header webgl-glass-header ${visible ? "home-header--revealed" : "home-header--hidden"} ${mobileNavOpen ? "mobile-nav--open" : ""}`}
+        onClick={(event) => {
+          const target = event.target;
+          if (target instanceof Element && target.closest("a, button")) {
+            setMobileNavOpen(false);
+          }
+        }}
       >
-        Zonora
-      </Link>
-      <nav className="header-nav">
-        <ul className="nav">
-          {navItems.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={isNavItemActive(pathname, item.href) ? "nav__link--active" : undefined}
-                aria-current={isNavItemActive(pathname, item.href) ? "page" : undefined}
-                onPointerEnter={() => handlePrefetch(item.href)}
-                onFocus={() => handlePrefetch(item.href)}
-              >
-                {t(item.key)}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <LangToggle />
-        <ThemeToggle />
-      </nav>
-    </header>
+        <Link
+          href="/home"
+          className="logo"
+          prefetch
+        >
+          Zonora
+        </Link>
+        <nav className="header-nav">
+          <ul className="nav">
+            {navItems.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={isNavItemActive(pathname, item.href) ? "nav__link--active" : undefined}
+                  aria-current={isNavItemActive(pathname, item.href) ? "page" : undefined}
+                  onPointerEnter={() => handlePrefetch(item.href)}
+                  onFocus={() => handlePrefetch(item.href)}
+                >
+                  {t(item.key)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <LangToggle />
+          <ThemeToggle />
+        </nav>
+      </header>
+
+      <button
+        type="button"
+        className={`mobile-nav-orb${mobileNavOpen ? " mobile-nav-orb--hidden" : ""}`}
+        aria-label="打开导航菜单"
+        aria-expanded={mobileNavOpen}
+        onClick={() => setMobileNavOpen(true)}
+      >
+        <img
+          src="/brand/zonora-mark.png"
+          width="15"
+          height="27"
+          alt=""
+          aria-hidden="true"
+        />
+      </button>
+    </>
   );
 }

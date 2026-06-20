@@ -19,86 +19,59 @@ export default function ModelDetailClient({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2rem 1.5rem" }}>
+    <div className="model-detail">
       <Link
         href="/models"
-        style={{ color: "var(--muted)", fontSize: "0.9rem", display: "inline-block", marginBottom: "1.5rem" }}
+        className="back-link"
         suppressHydrationWarning
       >
         ← 返回模型库
       </Link>
 
-      <div style={{ display: "flex" }}>
+      <div className={`model-detail__layout${collapsed ? " model-detail__layout--collapsed" : ""}`}>
         {/* 模型 */}
-        <div style={{ flex: collapsed ? "1 1 100%" : "0 0 70%", minWidth: 0, transition: "flex 0.35s ease" }}>
+        <div className="model-detail__viewer">
           <LaptopShowcaseWrapper />
         </div>
 
         {/* 把手 */}
-        <div
+        <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
-          style={{
-            width: "28px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
+          className="model-detail__toggle"
           title={collapsed ? "展开信息" : "收起信息"}
+          aria-label={collapsed ? "展开模型信息" : "收起模型信息"}
+          aria-expanded={!collapsed}
         >
-          <div
-            style={{
-              width: "3px",
-              height: "48px",
-              borderRadius: "2px",
-              background: "var(--muted)",
-              opacity: 0.3,
-              transition: "opacity 0.2s",
-            }}
-            suppressHydrationWarning
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.3")}
-          />
-        </div>
+          <span className="model-detail__toggle-handle" aria-hidden="true" />
+        </button>
 
         {/* 信息面板 */}
-        <div
-          style={{
-            flex: collapsed ? "0 0 0px" : "0 1 30%",
-            overflow: "hidden",
-            opacity: collapsed ? 0 : 1,
-            maxHeight: collapsed ? "0px" : "none",
-            transition: "flex 0.35s ease, opacity 0.25s ease, max-height 0s 0.35s",
-          }}
-        >
-          <div style={{ paddingLeft: "0.5rem" }}>
-            <h1 style={{ fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "0.75rem" }}>
+        <aside className="model-detail__info">
+          <div className="model-detail__info-inner">
+            <h1 className="model-detail__title">
               {model.name}
             </h1>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", lineHeight: 1.65 }} suppressHydrationWarning>
+            <p className="model-detail__description" suppressHydrationWarning>
               {model.description}
             </p>
 
-            <div style={{ display: "flex", gap: "0.4rem", marginTop: "1rem", flexWrap: "wrap" }}>
+            <div className="model-detail__tags">
               {model.tags.map((tag) => (
                 <span key={tag} className="tag">{tag}</span>
               ))}
             </div>
 
-            <dl style={{ marginTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "0.75rem" }} suppressHydrationWarning>
+            <dl className="model-detail__specs" suppressHydrationWarning>
               {model.details.map((d) => (
-                <div
-                  key={d.label}
-                  style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", fontSize: "0.85rem" }}
-                >
-                  <dt style={{ color: "var(--muted)" }} suppressHydrationWarning>{d.label}</dt>
-                  <dd style={{ fontWeight: 500 }}>{d.value}</dd>
+                <div key={d.label} className="model-detail__spec">
+                  <dt suppressHydrationWarning>{d.label}</dt>
+                  <dd>{d.value}</dd>
                 </div>
               ))}
             </dl>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );
