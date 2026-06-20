@@ -1,15 +1,18 @@
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 const sourceDir = path.join(rootDir, "sketches");
 const publicDir = path.join(rootDir, "public", "sketches");
+const galleryDir = path.join(publicDir, "_gallery");
 const dataDir = path.join(rootDir, "data");
 const dataFile = path.join(dataDir, "artSketches.ts");
 const VALID_EXTENSIONS = new Set([".jpg", ".jpeg", ".png"]);
 const EXPECTED_COUNT = 216;
+const GALLERY_WIDTHS = [320, 640];
 
 function readUInt16BE(buffer, offset) {
   return buffer.readUInt16BE(offset);
@@ -153,9 +156,19 @@ function toId(publicName) {
 }
 
 function generateDataFile(sketches) {
-  const rows = sketches.map((sketch) => `  {\n    id: ${JSON.stringify(sketch.id)},\n    title: ${JSON.stringify(sketch.title)},\n    src: ${JSON.stringify(sketch.src)},\n    width: ${sketch.width},\n    height: ${sketch.height},\n    aspect: ${Number(sketch.aspect.toFixed(6))},\n    originalFilename: ${JSON.stringify(sketch.originalFilename)},\n  }`).join(",\n");
+  const rows = sketches.map((sketch) => `  {\n    id: ${JSON.stringify(sketch.id)},\n    title: ${JSON.stringify(sketch.title)},\n    src: ${JSON.stringify(sketch.src)},\n    gallerySrc: ${JSON.stringify(sketch.gallerySrc)},\n    gallerySrcSet: ${JSON.stringify(sketch.gallerySrcSet)},\n    gallerySizes: ${JSON.stringify(sketch.gallerySizes)},\n    width: ${sketch.width},\n    height: ${sketch.height},\n    aspect: ${Number(sketch.aspect.toFixed(6))},\n    originalFilename: ${JSON.stringify(sketch.originalFilename)},\n  }`).join(",\n");
 
-  return `export type ArtSketch = {\n  id: string;\n  title: string;\n  src: string;\n  width: number;\n  height: number;\n  aspect: number;\n  originalFilename: string;\n};\n\nexport const artSketches: ArtSketch[] = [\n${rows}\n];\n`;
+  return `export type ArtSketch = {\n  id: string;\n  title: string;\n  src: string;\n  gallerySrc: string;\n  gallerySrcSet: string;\n  gallerySizes: string;\n  width: number;\n  height: number;\n  aspect: number;\n  originalFilename: string;\n};\n\nexport const artSketches: ArtSketch[] = [\n${rows}\n];\n`;
+}
+
+async function generateGalleryVariants(sourcePath, id) {
+  await Promise.all(GALLERY_WIDTHS.map((width) => (
+    sharp(sourcePath)
+      .rotate()
+      .resize({ width })
+      .webp({ quality: 76, effort: 4 })
+      .toFile(path.join(galleryDir, `${id}-${width}w.webp`))
+  )));
 }
 
 const files = readdirSync(sourceDir)
@@ -167,6 +180,7 @@ if (files.length !== EXPECTED_COUNT) {
 }
 
 mkdirSync(publicDir, { recursive: true });
+mkdirSync(galleryDir, { recursive: true });
 mkdirSync(dataDir, { recursive: true });
 
 const usedNames = new Set();
@@ -175,21 +189,32 @@ const sketches = files.map((file) => {
   const publicName = uniquePublicName(file, usedNames);
   const targetPath = path.join(publicDir, publicName);
   const { width, height } = readImageMetadata(sourcePath);
+  const id = toId(publicName);
 
   copyFileSync(sourcePath, targetPath);
 
   return {
-    id: toId(publicName),
+    id,
     title: titleFromFilename(file),
     src: `/sketches/${publicName}`,
+    gallerySrc: `/sketches/_gallery/${id}-320w.webp`,
+    gallerySrcSet: GALLERY_WIDTHS.map((variantWidth) => `/sketches/_gallery/${id}-${variantWidth}w.webp ${variantWidth}w`).join(", "),
+    gallerySizes: "(max-width: 760px) 48vw, 34rem",
     width,
     height,
     aspect: width / height,
     originalFilename: file,
+    sourcePath,
   };
 });
+
+for (let index = 0; index < sketches.length; index += 8) {
+  const batch = sketches.slice(index, index + 8);
+  await Promise.all(batch.map((sketch) => generateGalleryVariants(sketch.sourcePath, sketch.id)));
+}
 
 writeFileSync(dataFile, generateDataFile(sketches));
 
 console.log(`Synced ${sketches.length} art sketches to public/sketches`);
+console.log(`Generated ${sketches.length * GALLERY_WIDTHS.length} responsive WebP gallery images`);
 console.log("Generated data/artSketches.ts");

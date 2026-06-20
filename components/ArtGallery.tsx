@@ -1,50 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import type { CSSProperties, FocusEvent, MouseEvent, WheelEvent } from "react";
+import type { CSSProperties, FocusEvent, MouseEvent, WheelEvent as ReactWheelEvent } from "react";
 import type { ArtSketch } from "@/data/artSketches";
+import ArtworkLightbox, { useReducedMotion } from "@/components/ArtworkLightbox";
 
 type ArtGalleryProps = {
   sketches: ArtSketch[];
 };
 
 const REPEAT = 2;
-const MODAL_EXIT_MS = 440;
-const MODAL_ENTER_MS = 500;
+const AUTO_SCROLL_SPEED = 18 / 1000;
+const STOP_EASING_MS = 900;
+const MIN_SCROLL_SPEED = 0.001;
 
-type ModalTransition = {
-  to: ArtSketch;
-  direction: "prev" | "next";
-  phase: "exit" | "enter";
-  key: number;
-};
-
-function useReducedMotion() {
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updatePreference = () => setReducedMotion(query.matches);
-
-    updatePreference();
-    query.addEventListener("change", updatePreference);
-
-    return () => query.removeEventListener("change", updatePreference);
-  }, []);
-
-  return reducedMotion;
+function setImmediateScrollLeft(scroller: HTMLDivElement, left: number) {
+  scroller.scrollTo({ left, behavior: "instant" });
 }
-
-const FEATURED_IDS = new Set([
-  "2022-11-30", "2022-12-01",
-  "2023-02-01", "2023-02-04", "2023-02-05",
-  "2023-02-25", "2023-02-26",
-  "2023-03-08", "2023-03-10",
-  "2023-03-23", "2023-03-25", "2023-03-26",
-]);
-
-const FEATURED_WEIGHT = 8;
 
 function balancedRows(sketches: ArtSketch[]): { topRow: ArtSketch[]; bottomRow: ArtSketch[] } {
   let topWeight = 0;
@@ -84,37 +56,24 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
   const [selectedSketch, setSelectedSketch] = useState<ArtSketch | null>(null);
-  const [modalTransition, setModalTransition] = useState<ModalTransition | null>(null);
-  const modalTransitionKey = useRef(0);
   const isResetting = useRef(false);
-  const [mounted, setMounted] = useState(false);
 
-  // --- Auto-scroll: slow leftward continuous loop, decelerates on click/key ---
-  const activeRef = useRef(true);
-  const speedRef = useRef(0.3); // px/frame at 60fps ≈ 18px/s
-  const decelRef = useRef<number | null>(null);
-  const userPausedRef = useRef(false);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastFrameTimeRef = useRef<number | null>(null);
+  const scrollPositionRef = useRef(0);
+  const speedRef = useRef(AUTO_SCROLL_SPEED);
+  const stoppingRef = useRef(false);
+  const tiltFrameRef = useRef<number | null>(null);
+  const tiltTargetRef = useRef<{
+    element: HTMLButtonElement;
+    rect: DOMRect;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
 
   const closeModal = useCallback(() => {
     setSelectedSketch(null);
-    setModalTransition(null);
   }, []);
-
-  useEffect(() => {
-    if (!modalTransition) return;
-
-    const timeout = window.setTimeout(() => {
-      if (modalTransition.phase === "exit") {
-        setSelectedSketch(modalTransition.to);
-        setModalTransition({ ...modalTransition, phase: "enter" });
-        return;
-      }
-
-      setModalTransition(null);
-    }, modalTransition.phase === "exit" ? MODAL_EXIT_MS : MODAL_ENTER_MS);
-
-    return () => window.clearTimeout(timeout);
-  }, [modalTransition]);
 
   const startAtCenter = useCallback(() => {
     const scroller = scrollerRef.current;
@@ -123,155 +82,113 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     // Jump to the middle of the first segment for REPEAT=2
     const currentSegment = Math.floor(scroller.scrollLeft / segmentWidth);
     const nextLeft = (currentSegment + 0.5) * segmentWidth;
-    scroller.scrollLeft = nextLeft;
+    scrollPositionRef.current = nextLeft;
+    setImmediateScrollLeft(scroller, nextLeft);
   }, []);
 
   useLayoutEffect(() => {
     startAtCenter();
   }, [startAtCenter]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // --- Auto-scroll: slow leftward continuous loop ---
-  const autoScroll = useCallback(() => {
-    if (!activeRef.current) return;
-
+  const autoScroll = useCallback((time: number) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
-    scroller.scrollLeft += speedRef.current;
+    const previousTime = lastFrameTimeRef.current ?? time;
+    const elapsed = Math.min(time - previousTime, 50);
+    lastFrameTimeRef.current = time;
 
-    // Handle infinite loop wrap — if auto-scroll pushes past right edge
-    const segmentWidth = scroller.scrollWidth / REPEAT;
-    if (scroller.scrollLeft > segmentWidth * 1.7) {
-      scroller.scrollLeft = segmentWidth / 2;
+    if (!document.hidden && elapsed > 0) {
+      if (stoppingRef.current) {
+        speedRef.current *= Math.exp(-elapsed / STOP_EASING_MS);
+      }
+
+      scrollPositionRef.current += speedRef.current * elapsed;
+
+      const segmentWidth = scroller.scrollWidth / REPEAT;
+      if (scrollPositionRef.current > segmentWidth * 1.7) {
+        scrollPositionRef.current -= segmentWidth;
+      }
+
+      setImmediateScrollLeft(scroller, scrollPositionRef.current);
     }
 
-    decelRef.current = requestAnimationFrame(autoScroll);
+    if (stoppingRef.current && speedRef.current <= MIN_SCROLL_SPEED) {
+      speedRef.current = 0;
+      animationFrameRef.current = null;
+      return;
+    }
+
+    animationFrameRef.current = requestAnimationFrame(autoScroll);
   }, []);
 
   const stopAutoScroll = useCallback(() => {
-    activeRef.current = false;
-    if (decelRef.current !== null) {
-      cancelAnimationFrame(decelRef.current);
-      decelRef.current = null;
-    }
-    // Gradual deceleration — speed drops ~5% per frame
-    const decay = () => {
-      if (speedRef.current <= 0.01) {
-        speedRef.current = 0;
-        return;
-      }
-      speedRef.current *= 0.95;
-      decelRef.current = requestAnimationFrame(decay);
-    };
-    decelRef.current = requestAnimationFrame(decay);
+    stoppingRef.current = true;
   }, []);
 
-  // Start auto-scroll animation when mounted
   useEffect(() => {
     if (reducedMotion) return;
-    activeRef.current = true;
-    speedRef.current = 0.3; // px/frame at 60fps ≈ 18px/s
-    decelRef.current = requestAnimationFrame(autoScroll);
+
+    stoppingRef.current = false;
+    speedRef.current = AUTO_SCROLL_SPEED;
+    lastFrameTimeRef.current = null;
+    animationFrameRef.current = requestAnimationFrame(autoScroll);
 
     return () => {
-      activeRef.current = false;
-      if (decelRef.current !== null) {
-        cancelAnimationFrame(decelRef.current);
-        decelRef.current = null;
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
   }, [reducedMotion, autoScroll]);
 
-  // Stop on click on the scroller
   useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
+    const onPointerDown = () => stopAutoScroll();
+    const onKeyDown = () => stopAutoScroll();
 
-    const onClick = () => {
-      stopAutoScroll();
-    };
-    scroller.addEventListener("click", onClick, { once: false });
-    return () => scroller.removeEventListener("click", onClick);
-  }, [stopAutoScroll]);
-
-  // Stop on any keyboard press
-  useEffect(() => {
-    const onKeyDown = () => {
-      stopAutoScroll();
-    };
+    window.addEventListener("pointerdown", onPointerDown, { capture: true });
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [stopAutoScroll]);
-
-  // Restart when page becomes visible (navigating back, tab switch)
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        if (!userPausedRef.current) {
-          activeRef.current = true;
-          speedRef.current = 0.3;
-          if (decelRef.current !== null) {
-            cancelAnimationFrame(decelRef.current);
-            decelRef.current = null;
-          }
-          decelRef.current = requestAnimationFrame(autoScroll);
-        }
-      } else {
-        userPausedRef.current = true;
-        activeRef.current = false;
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, [autoScroll]);
-
-  const { topRow, bottomRow } = useMemo(() => {
-    if (!mounted) {
-      return balancedRows([...sketches]);
-    }
-
-    // Shuffle with featured bias toward front
-    const weighted = sketches.map((item) => ({
-      item,
-      sort: Math.random() / (FEATURED_IDS.has(item.id) ? FEATURED_WEIGHT : 1),
-    }));
-    weighted.sort((a, b) => a.sort - b.sort);
-    return balancedRows(weighted.map((w) => w.item));
-  }, [mounted, sketches]);
-
-  useEffect(() => {
-    if (!selectedSketch) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeModal();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("pointerdown", onPointerDown, { capture: true });
+      window.removeEventListener("keydown", onKeyDown);
     };
-  }, [selectedSketch, closeModal]);
+  }, [stopAutoScroll]);
 
-  const syncReset = useCallback(() => {
+  const { topRow, bottomRow } = useMemo(
+    () => balancedRows(sketches),
+    [sketches],
+  );
+
+  useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
-    const segmentWidth = scroller.scrollWidth / REPEAT;
-    isResetting.current = true;
-    scroller.scrollLeft = segmentWidth * 0.5 + (scroller.scrollLeft % segmentWidth);
-    requestAnimationFrame(() => {
-      isResetting.current = false;
+    const images = scroller.querySelectorAll<HTMLImageElement>(".art-work__image[data-gallery-src]");
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+
+        const image = entry.target as HTMLImageElement;
+        const src = image.dataset.gallerySrc;
+        if (src) image.src = src;
+        if (image.dataset.gallerySrcset) image.srcset = image.dataset.gallerySrcset;
+        if (image.dataset.gallerySizes) image.sizes = image.dataset.gallerySizes;
+
+        image.removeAttribute("data-gallery-src");
+        image.removeAttribute("data-gallery-srcset");
+        image.removeAttribute("data-gallery-sizes");
+        observer.unobserve(image);
+      }
+    }, {
+      root: scroller,
+      rootMargin: "0px 200% 0px 200%",
+      threshold: 0.01,
     });
-  }, []);
+
+    images.forEach((image) => observer.observe(image));
+    return () => observer.disconnect();
+  }, [topRow, bottomRow]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -279,7 +196,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
 
     // Native wheel listener with passive:false to guarantee preventDefault works
     // Only prevents default (stops page scroll) — event still bubbles to React onWheel on shell for actual scrolling
-    const onWheel = (e: WheelEvent) => {
+    const onWheel = (e: globalThis.WheelEvent) => {
       e.preventDefault();
     };
 
@@ -291,45 +208,6 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
   // flat ordered list for prev/next navigation
   const flatOrder = useMemo(() => [...topRow, ...bottomRow], [topRow, bottomRow]);
 
-  const selectedIndex = useMemo(
-    () => (selectedSketch ? flatOrder.findIndex((s) => s.id === selectedSketch.id) : -1),
-    [selectedSketch, flatOrder],
-  );
-
-  const goToPrev = useCallback(() => {
-    if (selectedIndex < 0 || !selectedSketch || modalTransition) return;
-    const prev = flatOrder[(selectedIndex - 1 + flatOrder.length) % flatOrder.length];
-
-    if (reducedMotion) {
-      setSelectedSketch(prev);
-      return;
-    }
-
-    setModalTransition({
-      to: prev,
-      direction: "prev",
-      phase: "exit",
-      key: ++modalTransitionKey.current,
-    });
-  }, [selectedIndex, selectedSketch, flatOrder, reducedMotion, modalTransition]);
-
-  const goToNext = useCallback(() => {
-    if (selectedIndex < 0 || !selectedSketch || modalTransition) return;
-    const next = flatOrder[(selectedIndex + 1) % flatOrder.length];
-
-    if (reducedMotion) {
-      setSelectedSketch(next);
-      return;
-    }
-
-    setModalTransition({
-      to: next,
-      direction: "next",
-      phase: "exit",
-      key: ++modalTransitionKey.current,
-    });
-  }, [selectedIndex, selectedSketch, flatOrder, reducedMotion, modalTransition]);
-
   const handleScroll = useCallback(() => {
     const scroller = scrollerRef.current;
     if (!scroller || isResetting.current) return;
@@ -337,18 +215,24 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     const segmentWidth = scroller.scrollWidth / REPEAT;
     const pos = scroller.scrollLeft;
 
+    if (Math.abs(pos - scrollPositionRef.current) > 2) {
+      scrollPositionRef.current = pos;
+    }
+
     if (pos < segmentWidth * 0.3) {
       isResetting.current = true;
-      scroller.scrollLeft = pos + segmentWidth;
+      scrollPositionRef.current = pos + segmentWidth;
+      setImmediateScrollLeft(scroller, scrollPositionRef.current);
       isResetting.current = false;
     } else if (pos > segmentWidth * 1.7) {
       isResetting.current = true;
-      scroller.scrollLeft = pos - segmentWidth;
+      scrollPositionRef.current = pos - segmentWidth;
+      setImmediateScrollLeft(scroller, scrollPositionRef.current);
       isResetting.current = false;
     }
   }, []);
 
-  const handleWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
+  const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
@@ -359,29 +243,71 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
     if (Math.abs(delta) < 1) return;
 
     const scrollDelta = delta * 0.6;
-    scroller.scrollLeft += scrollDelta;
+    scrollPositionRef.current = scroller.scrollLeft + scrollDelta;
+    setImmediateScrollLeft(scroller, scrollPositionRef.current);
     event.preventDefault();
     event.stopPropagation();
   }, []);
 
+  const handleMouseEnter = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    if (reducedMotion) return;
+
+    tiltTargetRef.current = {
+      element: event.currentTarget,
+      rect: event.currentTarget.getBoundingClientRect(),
+      clientX: event.clientX,
+      clientY: event.clientY,
+    };
+  }, [reducedMotion]);
+
   const handleMouseMove = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     if (reducedMotion) return;
 
-    const artwork = event.currentTarget;
-    const rect = artwork.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width - 0.5;
-    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    const target = tiltTargetRef.current;
+    if (!target || target.element !== event.currentTarget) {
+      tiltTargetRef.current = {
+        element: event.currentTarget,
+        rect: event.currentTarget.getBoundingClientRect(),
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+    } else {
+      target.clientX = event.clientX;
+      target.clientY = event.clientY;
+    }
 
-    artwork.style.transform = `perspective(900px) rotateY(${x * 7}deg) rotateX(${-y * 7}deg) translateY(-4px) scale(1.045)`;
+    if (tiltFrameRef.current !== null) return;
+    tiltFrameRef.current = requestAnimationFrame(() => {
+      tiltFrameRef.current = null;
+      const current = tiltTargetRef.current;
+      if (!current) return;
+
+      const x = (current.clientX - current.rect.left) / current.rect.width - 0.5;
+      const y = (current.clientY - current.rect.top) / current.rect.height - 0.5;
+      current.element.style.transform = `perspective(900px) rotateY(${x * 7}deg) rotateX(${-y * 7}deg) translateY(-4px) scale(1.045)`;
+    });
   }, [reducedMotion]);
 
   const handleMouseLeave = useCallback((event: MouseEvent<HTMLButtonElement> | FocusEvent<HTMLButtonElement>) => {
+    if (tiltTargetRef.current?.element === event.currentTarget) {
+      tiltTargetRef.current = null;
+    }
+    if (tiltFrameRef.current !== null) {
+      cancelAnimationFrame(tiltFrameRef.current);
+      tiltFrameRef.current = null;
+    }
     event.currentTarget.style.transform = "perspective(900px) rotateY(0deg) rotateX(0deg) translateY(0) scale(1)";
   }, []);
 
-  const renderArtwork = useCallback((sketch: ArtSketch, index: number) => (
+  useEffect(() => () => {
+    if (tiltFrameRef.current !== null) {
+      cancelAnimationFrame(tiltFrameRef.current);
+    }
+  }, []);
+
+  const renderArtwork = useCallback((sketch: ArtSketch, segment: number) => (
     <li
-      key={`${sketch.id}-${index}`}
+      key={`${segment}-${sketch.id}`}
       className="art-work"
       style={{
         "--art-aspect": sketch.aspect,
@@ -391,6 +317,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
       <button
         type="button"
         className="art-work__button"
+        onMouseEnter={handleMouseEnter}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onFocus={handleMouseLeave}
@@ -400,7 +327,9 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
         <span className="art-work__surface">
           <img
             className="art-work__image"
-            src={sketch.src}
+            data-gallery-src={sketch.gallerySrc}
+            data-gallery-srcset={sketch.gallerySrcSet}
+            data-gallery-sizes={sketch.gallerySizes}
             width={sketch.width}
             height={sketch.height}
             alt={sketch.title}
@@ -411,13 +340,13 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
         <span className="art-work__caption">{sketch.title}</span>
       </button>
     </li>
-  ), [handleMouseMove, handleMouseLeave]);
+  ), [handleMouseEnter, handleMouseMove, handleMouseLeave]);
 
   return (
     <div className="art-gallery" aria-label="绘画作品横向展墙">
       <div className="art-gallery__header">
         <span>{sketches.length} works</span>
-        <span className="art-gallery__hint">在画作区域滚动鼠标滚轮横向浏览 · 点击查看大图</span>
+        <span className="art-gallery__hint">滚轮横向浏览 · 点击页面或按任意键缓慢停下 · 点击画作查看大图</span>
       </div>
 
       <div className="art-gallery__shell" onWheel={handleWheel}>
@@ -431,10 +360,10 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
             {Array.from({ length: REPEAT }, (_, rep) => (
               <div key={rep} className="art-gallery__segment">
                 <ul className="art-gallery__row art-gallery__row--top">
-                  {topRow.map((sketch, i) => renderArtwork(sketch, i + rep * sketches.length))}
+                  {topRow.map((sketch) => renderArtwork(sketch, rep))}
                 </ul>
                 <ul className="art-gallery__row art-gallery__row--bottom">
-                  {bottomRow.map((sketch, i) => renderArtwork(sketch, i + topRow.length + rep * sketches.length))}
+                  {bottomRow.map((sketch) => renderArtwork(sketch, rep))}
                 </ul>
               </div>
             ))}
@@ -443,85 +372,16 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
       </div>
 
       {selectedSketch
-        ? createPortal(
-            <div
-              className="art-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-label={`${selectedSketch.title} 画作预览`}
-              onClick={closeModal}
-            >
-              <button
-                type="button"
-                className="art-modal__close"
-                onClick={closeModal}
-                aria-label="关闭"
-              >
-                ✕
-              </button>
-
-              <div className="art-modal__panel" onClick={(e) => e.stopPropagation()}>
-                <div className="art-modal__stage">
-                  <div className="art-modal__frame">
-                    {modalTransition?.phase === "exit" ? (
-                      <img
-                        key={`exit-${modalTransition.key}-${selectedSketch.id}`}
-                        className={`art-modal__image art-modal__image--exit-flow art-modal__image--exit-${modalTransition.direction}`}
-                        src={selectedSketch.src}
-                        width={selectedSketch.width}
-                        height={selectedSketch.height}
-                        alt={selectedSketch.title}
-                        decoding="async"
-                        draggable={false}
-                      />
-                    ) : modalTransition?.phase === "enter" ? (
-                      <img
-                        key={`enter-${modalTransition.key}-${selectedSketch.id}`}
-                        className={`art-modal__image art-modal__image--enter art-modal__image--enter-${modalTransition.direction}`}
-                        src={selectedSketch.src}
-                        width={selectedSketch.width}
-                        height={selectedSketch.height}
-                        alt={selectedSketch.title}
-                        decoding="async"
-                        draggable={false}
-                      />
-                    ) : (
-                      <img
-                        className="art-modal__image"
-                        src={selectedSketch.src}
-                        width={selectedSketch.width}
-                        height={selectedSketch.height}
-                        alt={selectedSketch.title}
-                        decoding="async"
-                        draggable={false}
-                      />
-                    )}
-                    <button
-                      type="button"
-                      className="art-modal__nav art-modal__nav--prev"
-                      onClick={(e) => { e.stopPropagation(); goToPrev(); }}
-                      aria-label="上一张"
-                    >
-                      ←
-                    </button>
-                    <button
-                      type="button"
-                      className="art-modal__nav art-modal__nav--next"
-                      onClick={(e) => { e.stopPropagation(); goToNext(); }}
-                      aria-label="下一张"
-                    >
-                      →
-                    </button>
-                  </div>
-                </div>
-                <div className="art-modal__caption">
-                  <span>{selectedSketch.title}</span>
-                  <span>{selectedSketch.width} × {selectedSketch.height}</span>
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )
+        ? (
+          <ArtworkLightbox
+            items={flatOrder}
+            selected={selectedSketch}
+            onSelect={setSelectedSketch}
+            onClose={closeModal}
+            secondaryText={(sketch) => `${sketch.width} × ${sketch.height}`}
+            previewLabel="画作预览"
+          />
+        )
         : null}
     </div>
   );

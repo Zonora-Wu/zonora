@@ -1,218 +1,118 @@
-/**
- * Photo optimization build script.
- * Generates WebP versions at multiple sizes for responsive loading.
- * Usage: node scripts/optimize-photos.mjs
- *
- * Strategy:
- * - Scans public/photography/ subdirectories (chongqing, sichuan, yunnan, liaoning)
- * - For each photo: generates small (800w), medium (1600w), and original-sized WebP
- * - Stores WebPs in public/photography/_webp/<region>/
- * - Outputs a JSON manifest mapping original paths to srcset data
- */
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
-import { join, dirname, basename, extname } from 'path';
-import { fileURLToPath } from 'url';
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const photoDir = path.join(rootDir, "public", "photography");
+const outputDir = path.join(photoDir, "_webp");
+const dataFile = path.join(rootDir, "data", "photoAssets.ts");
+const imageExtensions = new Set([".jpg", ".jpeg", ".png"]);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PROJECT_ROOT = join(__dirname, '..');
-const PHOTO_DIR = join(PROJECT_ROOT, 'public', 'photography');
-const WEBP_DIR = join(PROJECT_ROOT, 'public', 'photography', '_webp');
-const MANIFEST_PATH = join(PROJECT_ROOT, 'scripts', 'photo-manifest.json');
-
-// Photo regions from data/photoRegions.ts
-const REGIONS = ['chongqing', 'sichuan', 'yunnan', 'liaoning'];
-const SIZES = [
-  { label: 'small', width: 800 },
-  { label: 'medium', width: 1600 },
+const variants = [
+  { key: "cardSmall", width: 480, quality: 76 },
+  { key: "cardLarge", width: 960, quality: 78 },
+  { key: "lightboxSmall", width: 1600, quality: 82 },
+  { key: "lightboxLarge", width: 2048, quality: 84 },
 ];
 
-/**
- * Convert image to WebP at specified width using ImageMagick (magick convert).
- * Falls back to original path if conversion fails.
- */
-function convertToWebP(inputPath, outputWebPPath, maxWidth) {
-  try {
-    const { execSync } = require('child_process');
-    const outputDir = dirname(outputWebPPath);
-    if (!existsSync(outputDir)) {
-      mkdirSync(outputDir, { recursive: true });
-    }
+async function listPhotos() {
+  const regions = (await readdir(photoDir, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_"))
+    .map((entry) => entry.name)
+    .sort();
 
-    // Use ImageMagick for conversion
-    execSync(
-      `magick "${inputPath}" -resize ${maxWidth}x -quality 85 -strip "${outputWebPPath}"`,
-      { stdio: 'pipe' }
-    );
-    return existsSync(outputWebPPath);
-  } catch (err) {
-    console.warn(`ImageMagick convert failed for ${inputPath}: ${err.message}`);
-    // Try cwebp as fallback
-    try {
-      const { execSync } = require('child_process');
-      const outputDir = dirname(outputWebPPath);
-      if (!existsSync(outputDir)) {
-        mkdirSync(outputDir, { recursive: true });
-      }
-      execSync(
-        `cwebp -q 85 -size ${maxWidth} "${inputPath}" -o "${outputWebPPath}"`,
-        { stdio: 'pipe' }
-      );
-      return existsSync(outputWebPPath);
-    } catch (err2) {
-      console.warn(`cwebp fallback also failed: ${err2.message}`);
-      return false;
-    }
-  }
-}
+  const photos = [];
+  for (const region of regions) {
+    const regionDir = path.join(photoDir, region);
+    const files = (await readdir(regionDir))
+      .filter((filename) => imageExtensions.has(path.extname(filename).toLowerCase()))
+      .sort();
 
-/**
- * Scan a region directory for image files.
- */
-function scanRegion(region) {
-  const regionDir = join(PHOTO_DIR, region);
-  if (!existsSync(regionDir)) {
-    console.warn(`Region directory not found: ${regionDir}`);
-    return [];
-  }
-
-  const files = readdirSync(regionDir)
-    .filter(f => {
-      const ext = extname(f).toLowerCase();
-      return ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) && !f.startsWith('_');
-    })
-    .map(f => ({
-      filename: f,
-      originalPath: join(regionDir, f),
-      region,
-    }));
-
-  return files;
-}
-
-/**
- * Generate WebP variants for a single image.
- */
-function generateWebPVariants(imageInfo) {
-  const { filename, originalPath, region } = imageInfo;
-  const baseName = basename(filename, extname(filename));
-  const webpRegionDir = join(WEBP_DIR, region);
-
-  if (!existsSync(webpRegionDir)) {
-    mkdirSync(webpRegionDir, { recursive: true });
-  }
-
-  const variants = [];
-
-  for (const size of SIZES) {
-    const webpFilename = `${baseName}_${size.width}w.webp`;
-    const webpPath = join(webpRegionDir, webpFilename);
-    const webpPublicPath = `/photography/_webp/${region}/${webpFilename}`;
-
-    if (existsSync(webpPath)) {
-      // Already exists, skip conversion
-      variants.push({
-        label: size.label,
-        width: size.width,
-        path: webpPublicPath,
-      });
-    } else {
-      const converted = convertToWebP(originalPath, webpPath, size.width);
-      if (converted && existsSync(webpPath)) {
-        variants.push({
-          label: size.label,
-          width: size.width,
-          path: webpPublicPath,
-        });
-      } else {
-        console.warn(`Failed to convert: ${originalPath}`);
-      }
-    }
-  }
-
-  // Also generate a full-resolution WebP (just format conversion, no resize)
-  const fullWebpFilename = `${baseName}_full.webp`;
-  const fullWebpPath = join(webpRegionDir, fullWebpFilename);
-  const fullWebpPublicPath = `/photography/_webp/${region}/${fullWebpFilename}`;
-
-  if (!existsSync(fullWebpPath)) {
-    const fullConverted = convertToWebP(originalPath, fullWebpPath, null);
-    if (fullConverted && existsSync(fullWebpPath)) {
-      variants.push({
-        label: 'full',
-        width: 9999,
-        path: fullWebpPublicPath,
+    for (const filename of files) {
+      photos.push({
+        id: path.basename(filename, path.extname(filename)),
+        region,
+        filename,
+        sourcePath: path.join(regionDir, filename),
       });
     }
-  } else {
-    variants.push({
-      label: 'full',
-      width: 9999,
-      path: fullWebpPublicPath,
-    });
   }
 
-  return variants;
+  return photos;
 }
 
-/**
- * Build srcset string from variants.
- */
-function buildSrcset(variants) {
-  return variants
-    .filter(v => v.width < 9999)
-    .map(v => `${v.path} ${v.width}w`)
-    .join(', ');
-}
+async function optimizePhoto(photo) {
+  const metadata = await sharp(photo.sourcePath).rotate().metadata();
+  if (!metadata.width || !metadata.height) {
+    throw new Error(`Unable to read dimensions for ${photo.sourcePath}`);
+  }
 
-/**
- * Build sizes attribute for responsive images.
- */
-function buildSizes() {
-  return '(max-width: 640px) 200px, (max-width: 1024px) 400px, 800px';
-}
+  const regionOutputDir = path.join(outputDir, photo.region);
+  await mkdir(regionOutputDir, { recursive: true });
 
-// Main execution
-console.log('=== Photo Optimization Build ===\n');
+  const generated = {};
+  for (const variant of variants) {
+    const actualWidth = Math.min(variant.width, metadata.width);
+    const filename = `${photo.id}-${variant.width}w.webp`;
+    const outputPath = path.join(regionOutputDir, filename);
 
-let totalProcessed = 0;
-let totalConverted = 0;
-const manifest = {};
+    await sharp(photo.sourcePath)
+      .rotate()
+      .resize({ width: variant.width, withoutEnlargement: true })
+      .webp({ quality: variant.quality, effort: 4 })
+      .toFile(outputPath);
 
-for (const region of REGIONS) {
-  console.log(`Scanning region: ${region}`);
-  const files = scanRegion(region);
-  console.log(`  Found ${files.length} images`);
-
-  manifest[region] = {};
-
-  for (const fileInfo of files) {
-    const variants = generateWebPVariants(fileInfo);
-    const key = fileInfo.filename.replace(/\.[^.]+$/, '');
-    
-    manifest[region][key] = {
-      variants,
-      srcset: buildSrcset(variants),
-      sizes: buildSizes(),
-      fullWebp: variants.find(v => v.label === 'full')?.path || null,
+    generated[variant.key] = {
+      src: `/photography/_webp/${photo.region}/${filename}`,
+      width: actualWidth,
     };
-
-    if (variants.length > 0) {
-      totalConverted++;
-    }
-    totalProcessed++;
   }
+
+  return {
+    id: photo.id,
+    width: metadata.width,
+    height: metadata.height,
+    cardSrc: generated.cardSmall.src,
+    cardSrcSet: `${generated.cardSmall.src} ${generated.cardSmall.width}w, ${generated.cardLarge.src} ${generated.cardLarge.width}w`,
+    cardSizes: "(max-width: 760px) 44vw, 17vw",
+    lightboxSrc: generated.lightboxSmall.src,
+    lightboxSrcSet: `${generated.lightboxSmall.src} ${generated.lightboxSmall.width}w, ${generated.lightboxLarge.src} ${generated.lightboxLarge.width}w`,
+    lightboxSizes: "calc(100vw - 6rem)",
+  };
 }
 
-// Write manifest
-writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
+function generateDataFile(assets) {
+  const rows = assets.map((asset) => `  ${JSON.stringify(asset.id)}: ${JSON.stringify(asset)},`).join("\n");
+  return `export type PhotoAsset = {
+  id: string;
+  width: number;
+  height: number;
+  cardSrc: string;
+  cardSrcSet: string;
+  cardSizes: string;
+  lightboxSrc: string;
+  lightboxSrcSet: string;
+  lightboxSizes: string;
+};
 
-console.log(`\n=== Complete ===`);
-console.log(`Processed: ${totalProcessed} photos`);
-console.log(`Converted: ${totalConverted} photos with WebP variants`);
-console.log(`Manifest saved to: ${MANIFEST_PATH}`);
-console.log(`\nNext steps:`);
-console.log(`1. Update PhotoItem type to include srcset/sizes`);
-console.log(`2. Update PhotoMagnet and PhotoLightbox to use srcset`);
-console.log(`3. Run: node scripts/optimize-photos.mjs to regenerate`);
+export const photoAssets: Record<string, PhotoAsset> = {
+${rows}
+};
+`;
+}
+
+const photos = await listPhotos();
+const assets = [];
+
+await rm(outputDir, { recursive: true, force: true });
+
+for (let index = 0; index < photos.length; index += 4) {
+  assets.push(...await Promise.all(photos.slice(index, index + 4).map(optimizePhoto)));
+}
+
+await writeFile(dataFile, generateDataFile(assets));
+
+console.log(`Optimized ${assets.length} photography images`);
+console.log(`Generated ${assets.length * variants.length} responsive WebP variants`);
+console.log(`Generated ${path.relative(rootDir, dataFile)}`);

@@ -13,6 +13,15 @@ export type PhotoLayoutResult = {
   overlapCount: number;
 };
 
+function hashUnit(value: string, salt: number) {
+  let hash = 2166136261 ^ salt;
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
 /**
  * Two-row horizontal layout — photos split into two rows (top/bottom),
  * evenly spaced horizontally within each row, with slight random jitter.
@@ -61,13 +70,10 @@ export function balancedTwoRows(
       const baseX = startX + i * (PHOTO_WIDTH_PCT + GAP_PCT);
       const baseY = rowY;
 
-      // Subtle random jitter for natural feel
-      const jitterX = (Math.random() - 0.5) * 1.5; // ±0.75%
-      const jitterY = (Math.random() - 0.5) * 1.5; // ±0.75%
-      // Stronger tilt: ±4° instead of ±2°
-      const rotate = (Math.random() - 0.5) * 8; // ±4° tilt
-      // Varied scale for staggered visual — photos appear at different sizes
-      const scale = 0.9 + Math.random() * 0.15; // 0.9 ~ 1.3
+      const jitterX = (hashUnit(photo.id, 1) - 0.5) * 1.5;
+      const jitterY = (hashUnit(photo.id, 2) - 0.5) * 1.5;
+      const rotate = (hashUnit(photo.id, 3) - 0.5) * 8;
+      const scale = 0.9 + hashUnit(photo.id, 4) * 0.15;
 
       results.push({
         photoId: photo.id,

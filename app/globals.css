@@ -1020,8 +1020,6 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   z-index: 3;
   width: clamp(20rem, 48vw, 48rem);
   pointer-events: none;
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
 }
 
 .art-gallery__shell::before {
@@ -1056,9 +1054,8 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   outline: none;
-  /* Smooth scroll-snap for infinite loop with REPEAT=2 */
-  scroll-snap-type: x proximity;
-  scroll-behavior: smooth;
+  scroll-snap-type: none;
+  scroll-behavior: auto;
 }
 
 .art-gallery__scroller::-webkit-scrollbar {
@@ -1095,6 +1092,9 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   height: var(--art-row-height);
   flex: 0 0 auto;
   perspective: 900px;
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--art-row-height);
 }
 
 .art-work__button {
@@ -1775,8 +1775,6 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   z-index: 30;
   width: clamp(8rem, 22vw, 26rem);
   pointer-events: none;
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
 }
 
 .photo-wall-shell::before {
@@ -1865,11 +1863,15 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   pointer-events: auto;
   left: var(--photo-x);
   top: var(--photo-y);
-  transform: rotate(var(--photo-rotate)) scale(var(--photo-scale));
+  transform:
+    translate3d(var(--photo-drag-x), var(--photo-drag-y), 0)
+    rotate(var(--photo-rotate))
+    scale(var(--photo-scale));
   transform-origin: 50% 12%;
   opacity: 0;
   animation: photo-magnet-drop 740ms cubic-bezier(0.16, 1, 0.3, 1) var(--photo-enter-delay) forwards;
   transition: left 0.45s cubic-bezier(0.16, 1, 0.3, 1), top 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  contain: layout paint style;
 }
 
 /* After initial drop-in animation completes, disable animation so only CSS transitions animate position changes. */
@@ -1890,6 +1892,8 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   filter: brightness(1.08) saturate(1.04);
   animation: none;
   opacity: 1;
+  transition: none;
+  will-change: transform;
 }
 
 .photo-magnet__media {
@@ -2060,10 +2064,6 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   transform: translateX(-50%);
 }
 
-.photo-lightbox__panel {
-  min-width: min(92vw, 42rem);
-}
-
 .photo-lightbox__image {
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.46);
 }
@@ -2117,12 +2117,10 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 @keyframes photo-wall-enter {
   from {
     opacity: 0;
-    filter: blur(8px) brightness(0.68);
     transform: translateY(18px) scale(0.992);
   }
   to {
     opacity: 1;
-    filter: blur(0) brightness(1);
     transform: translateY(0) scale(1);
   }
 }
@@ -2130,11 +2128,17 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 @keyframes photo-magnet-drop {
   from {
     opacity: 0;
-    transform: rotate(calc(var(--photo-rotate) - 9deg)) translate3d(0, 28px, 0) scale(calc(var(--photo-scale) * 0.92));
+    transform:
+      translate3d(var(--photo-drag-x), calc(var(--photo-drag-y) + 28px), 0)
+      rotate(calc(var(--photo-rotate) - 9deg))
+      scale(calc(var(--photo-scale) * 0.92));
   }
   to {
     opacity: 1;
-    transform: rotate(var(--photo-rotate)) translate3d(0, 0, 0) scale(var(--photo-scale));
+    transform:
+      translate3d(var(--photo-drag-x), var(--photo-drag-y), 0)
+      rotate(var(--photo-rotate))
+      scale(var(--photo-scale));
   }
 }
 
@@ -2167,8 +2171,6 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   .photo-wall-shell::before,
   .photo-wall-shell::after {
     width: 2.2rem;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
   }
 
   .photo-wall {

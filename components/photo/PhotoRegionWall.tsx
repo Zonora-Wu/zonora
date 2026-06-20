@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PhotoItem, PhotoRegion } from "@/data/photoRegions";
 import PhotoMagnet from "@/components/photo/PhotoMagnet";
-import PhotoLightbox from "@/components/photo/PhotoLightbox";
-import { generatePhotoLayout, balancedTwoRows } from "@/utils/photoLayout";
+import ArtworkLightbox from "@/components/ArtworkLightbox";
+import { balancedTwoRows } from "@/utils/photoLayout";
 import type { PhotoLayoutResult } from "@/utils/photoLayout";
 
 type Position = {
@@ -26,65 +26,36 @@ type WallDragState = {
 
 const WALL_LONG_PRESS_MS = 220;
 const WALL_SWITCH_DISTANCE = 90;
-const RESIZE_DEBOUNCE_MS = 300;
+const RESIZE_DEBOUNCE_MS = 120;
 
 function wrapIndex(index: number, length: number) {
   return (index + length) % length;
 }
 
 export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
+  const wallRef = useRef<HTMLDivElement>(null);
   const wallDrag = useRef<WallDragState | null>(null);
-   const nextPhotoZ = useRef(100);
-   const resizeTimerRef = useRef<number>(-1);
-   const [regionIndex, setRegionIndex] = useState(0);
-   const [positions, setPositions] = useState<Record<string, Position>>({});
-   const [photoZLayers, setPhotoZLayers] = useState<Record<string, number>>({});
-   const [photoLayout, setPhotoLayout] = useState<PhotoLayoutResult[]>([]);
-   const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null);
+  const nextPhotoZ = useRef(100);
+  const resizeTimerRef = useRef<number>(-1);
+  const hasMeasuredWall = useRef(false);
+  const [regionIndex, setRegionIndex] = useState(0);
+  const [positions, setPositions] = useState<Record<string, Position>>({});
+  const [photoLayout, setPhotoLayout] = useState<PhotoLayoutResult[]>([]);
+  const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null);
 
   const region = regions[regionIndex];
-  const rawPhotos = region.photos;
-
-  // Shuffle photos on mount (client-side only) so every page visit/refresh randomizes the layout
-  // Using useState + useEffect avoids SSR/CSR Math.random() mismatch
-  const [photos, setPhotos] = useState<PhotoItem[]>(rawPhotos);
-
-  useEffect(() => {
-    if (rawPhotos.length <= 1) {
-      setPhotos(rawPhotos);
-      return;
-    }
-    // Seed-based shuffle from region index so switching regions keeps consistent
-    // but page refresh/visit produces a different order
-    const shuffled = [...rawPhotos];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    setPhotos(shuffled);
-  }, [rawPhotos]);
-
-  const selectedIndex = useMemo(() => {
-    if (!selectedPhoto) return -1;
-    return photos.findIndex((photo) => photo.id === selectedPhoto.id);
-  }, [photos, selectedPhoto]);
+  const photos = region.photos;
 
   const goRegion = useCallback((direction: -1 | 1) => {
     setRegionIndex((current) => wrapIndex(current + direction, regions.length));
   }, [regions.length]);
 
-  const goPhoto = useCallback((direction: -1 | 1) => {
-    if (selectedIndex < 0 || photos.length === 0) return;
-    setSelectedPhoto(photos[wrapIndex(selectedIndex + direction, photos.length)]);
-  }, [photos, selectedIndex]);
-
   const updatePosition = useCallback((photoId: string, position: Position) => {
     setPositions((current) => ({ ...current, [photoId]: position }));
   }, []);
 
-  const raisePhoto = useCallback((photoId: string) => {
-    const nextZ = nextPhotoZ.current++;
-    setPhotoZLayers((current) => ({ ...current, [photoId]: nextZ }));
+  const getNextPhotoZ = useCallback(() => {
+    return nextPhotoZ.current++;
   }, []);
 
   const startWallDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
@@ -148,6 +119,8 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
 
   useEffect(() => {
     setSelectedPhoto(null);
+    setPositions({});
+    hasMeasuredWall.current = false;
   }, [regionIndex]);
 
   useEffect(() => {
@@ -165,7 +138,7 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
   useEffect(() => {
     if (photos.length === 0) return;
 
-    const wallEl = document.querySelector(".photo-wall");
+    const wallEl = wallRef.current;
     if (!wallEl) return;
 
     // Use ResizeObserver for precise resize detection on the wall element
@@ -177,14 +150,20 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
         window.clearTimeout(resizeTimerRef.current);
       }
 
-      resizeTimerRef.current = window.setTimeout(() => {
+      const updateLayout = () => {
         const entry = entries[0];
         if (!entry) return;
         const { width, height } = entry.contentRect;
         const layout = balancedTwoRows(photos, width, height);
         setPhotoLayout(layout);
-        setPositions({});
-      }, RESIZE_DEBOUNCE_MS);
+        hasMeasuredWall.current = true;
+      };
+
+      if (!hasMeasuredWall.current) {
+        updateLayout();
+      } else {
+        resizeTimerRef.current = window.setTimeout(updateLayout, RESIZE_DEBOUNCE_MS);
+      }
     });
 
     observer.observe(wallEl);
@@ -195,6 +174,28 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
       }
     };
   }, [photos]);
+
+  const photoLayoutById = useMemo(
+    () => new Map(photoLayout.map((entry) => [entry.photoId, entry.position])),
+    [photoLayout],
+  );
+
+  const lightboxPhotos = useMemo(
+    () => photos.map((photo) => ({
+      ...photo,
+      src: photo.lightboxSrc ?? photo.src,
+      srcset: photo.lightboxSrcSet,
+      sizes: photo.lightboxSizes,
+    })),
+    [photos],
+  );
+
+  const selectedLightboxPhoto = useMemo(
+    () => selectedPhoto
+      ? lightboxPhotos.find((photo) => photo.id === selectedPhoto.id) ?? null
+      : null,
+    [lightboxPhotos, selectedPhoto],
+  );
 
   return (
     <section
@@ -215,6 +216,7 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
 
       <div className="photo-wall-shell">
         <div
+          ref={wallRef}
           className="photo-wall"
           key={region.id}
           aria-label={`${region.name}摄影冰箱贴墙`}
@@ -224,18 +226,16 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
 
           {photos.length > 0 ? (
             photos.map((photo, index) => {
-              const layoutEntry = photoLayout.find((l) => l.photoId === photo.id);
-              const layout = layoutEntry?.position;
+              const layout = photoLayoutById.get(photo.id);
               return (
                 <PhotoMagnet
                   key={photo.id}
                   photo={photo}
                   position={positions[photo.id]}
-                  zIndex={photoZLayers[photo.id]}
                   index={index}
                   layout={layout}
                   onCommitPosition={updatePosition}
-                  onRaise={raisePhoto}
+                  getNextZIndex={getNextPhotoZ}
                   onOpen={setSelectedPhoto}
                 />
               );
@@ -276,14 +276,22 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
         </div>
       </div>
 
-      {selectedPhoto ? (
-        <PhotoLightbox
-          photo={selectedPhoto}
-          regionName={region.name}
+      {selectedLightboxPhoto ? (
+        <ArtworkLightbox
+          items={lightboxPhotos}
+          selected={selectedLightboxPhoto}
+          onSelect={setSelectedPhoto}
           onClose={() => setSelectedPhoto(null)}
-          onPrev={() => goPhoto(-1)}
-          onNext={() => goPhoto(1)}
-          hasNavigation={photos.length > 1}
+          secondaryText={(photo) => photo.location}
+          previewLabel="摄影预览"
+          imageClassName="photo-lightbox__image"
+          renderEmpty={(photo) => (
+            <div className="photo-lightbox__empty">
+              <span>{region.name}</span>
+              <strong>{photo.title}</strong>
+              <p>请在摄影数据中配置图片路径后查看大图。</p>
+            </div>
+          )}
         />
       ) : null}
     </section>

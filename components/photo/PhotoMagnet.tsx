@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type { PhotoItem } from "@/data/photoRegions";
 
@@ -12,7 +12,6 @@ type Position = {
 type PhotoMagnetProps = {
   photo: PhotoItem;
   position?: Position;
-  zIndex?: number;
   index: number;
   layout?: {
     x: number;
@@ -21,7 +20,7 @@ type PhotoMagnetProps = {
     scale: number;
   };
   onCommitPosition: (photoId: string, position: Position) => void;
-  onRaise: (photoId: string) => void;
+  getNextZIndex: () => number;
   onOpen: (photo: PhotoItem) => void;
 };
 
@@ -29,12 +28,14 @@ type PressState = {
   pointerId: number;
   startClientX: number;
   startClientY: number;
-  offsetX: number;
-  offsetY: number;
+  wallRect: DOMRect;
+  startPosition: Position;
   dragging: boolean;
   rafId: number | null;
   timerId: number | null;
   nextPosition: Position;
+  dragX: number;
+  dragY: number;
 };
 
 const LONG_PRESS_MS = 220;
@@ -49,9 +50,10 @@ function getWallRect(element: HTMLElement) {
   return wall?.getBoundingClientRect() ?? element.getBoundingClientRect();
 }
 
-export default function PhotoMagnet({ photo, position, zIndex, index, layout, onCommitPosition, onRaise, onOpen }: PhotoMagnetProps) {
+function PhotoMagnet({ photo, position, index, layout, onCommitPosition, getNextZIndex, onOpen }: PhotoMagnetProps) {
   const magnetRef = useRef<HTMLButtonElement>(null);
   const pressState = useRef<PressState | null>(null);
+  const liveZIndexRef = useRef(photo.layout.z ?? index + 2);
   const [isDragging, setIsDragging] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
 
@@ -69,11 +71,11 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
     return (0.16 * layout.scale) / aspect;
   }, [layout, photo]);
 
-  const setLivePosition = useCallback((next: Position) => {
+  const setLiveDragOffset = useCallback((x: number, y: number) => {
     const magnet = magnetRef.current;
     if (!magnet) return;
-    magnet.style.setProperty("--photo-x", `${next.x}%`);
-    magnet.style.setProperty("--photo-y", `${next.y}%`);
+    magnet.style.setProperty("--photo-drag-x", `${x}px`);
+    magnet.style.setProperty("--photo-drag-y", `${y}px`);
   }, []);
 
   const enterDragMode = useCallback(() => {
@@ -95,31 +97,30 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
   const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0 && event.pointerType === "mouse") return;
 
-    onRaise(photo.id);
-
     const magnet = event.currentTarget;
     const wallRect = getWallRect(magnet);
     const currentPosition = position ?? { x: layout?.x ?? photo.layout.x, y: layout?.y ?? photo.layout.y };
-    const currentLeft = (currentPosition.x / 100) * wallRect.width;
-    const currentTop = (currentPosition.y / 100) * wallRect.height;
-
     magnet.setPointerCapture(event.pointerId);
+    liveZIndexRef.current = getNextZIndex();
+    magnet.style.setProperty("--photo-z", String(liveZIndexRef.current));
 
     const state: PressState = {
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
-      offsetX: event.clientX - wallRect.left - currentLeft,
-      offsetY: event.clientY - wallRect.top - currentTop,
+      wallRect,
+      startPosition: currentPosition,
       dragging: false,
       rafId: null,
       timerId: null,
       nextPosition: currentPosition,
+      dragX: 0,
+      dragY: 0,
     };
 
     state.timerId = window.setTimeout(() => enterDragMode(), LONG_PRESS_MS);
     pressState.current = state;
-  }, [enterDragMode, onRaise, photo.id, photo.layout.x, photo.layout.y, layout?.x, layout?.y, position]);
+  }, [enterDragMode, getNextZIndex, photo.layout.x, photo.layout.y, layout?.x, layout?.y, position]);
 
   const handlePointerMove = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     const state = pressState.current;
@@ -132,21 +133,25 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
 
     if (!state.dragging) return;
 
-    const wallRect = getWallRect(event.currentTarget);
+    const wallRect = state.wallRect;
+    const dragX = event.clientX - state.startClientX;
+    const dragY = event.clientY - state.startClientY;
     const next = {
-      x: clamp(((event.clientX - wallRect.left - state.offsetX) / wallRect.width) * 100, -10, 96),
-      y: clamp(((event.clientY - wallRect.top - state.offsetY) / wallRect.height) * 100, -8, 96),
+      x: clamp(state.startPosition.x + (dragX / wallRect.width) * 100, -10, 96),
+      y: clamp(state.startPosition.y + (dragY / wallRect.height) * 100, -8, 96),
     };
 
     state.nextPosition = next;
+    state.dragX = dragX;
+    state.dragY = dragY;
     event.preventDefault();
 
     if (state.rafId !== null) return;
     state.rafId = window.requestAnimationFrame(() => {
       state.rafId = null;
-      setLivePosition(state.nextPosition);
+      setLiveDragOffset(state.dragX, state.dragY);
     });
-  }, [enterDragMode, setLivePosition]);
+  }, [enterDragMode, setLiveDragOffset]);
 
   const finishPointer = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     const state = pressState.current;
@@ -162,20 +167,18 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
     pressState.current = null;
 
     if (wasDragging) {
-      // Update position to final value first, then clear dragging state so
-      // the CSS transition animates from the dragged position smoothly.
-      setLivePosition(nextPosition);
-      requestAnimationFrame(() => setIsDragging(false));
       onCommitPosition(photo.id, nextPosition);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setLiveDragOffset(0, 0);
+          setIsDragging(false);
+        });
+      });
       return;
     }
 
     onOpen(photo);
-  }, [clearPressTimer, onCommitPosition, onOpen, photo, setLivePosition]);
-
-  useEffect(() => {
-    setLivePosition(basePosition);
-  }, [basePosition, setLivePosition]);
+  }, [clearPressTimer, onCommitPosition, onOpen, photo, setLiveDragOffset]);
 
   useEffect(() => () => {
     const state = pressState.current;
@@ -193,9 +196,11 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
         "--photo-y": `${basePosition.y}%`,
         "--photo-rotate": `${layout?.rotate ?? photo.layout.rotate}deg`,
         "--photo-scale": layout?.scale ?? photo.layout.scale ?? 1,
+        "--photo-drag-x": "0px",
+        "--photo-drag-y": "0px",
         "--photo-dim-pct-w": `${dimPctW}%`,
         "--photo-dim-pct-h": `${dimPctH}%`,
-        "--photo-z": zIndex ?? photo.layout.z ?? index + 2,
+        "--photo-z": liveZIndexRef.current,
         "--photo-enter-delay": `${index * 90}ms`,
       } as CSSProperties}
       onPointerDown={handlePointerDown}
@@ -209,9 +214,9 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
       <span className="photo-magnet__media">
         {photo.src ? (
           <img
-            src={photo.src}
-            srcSet={photo.srcset}
-            sizes={photo.sizes}
+            src={photo.cardSrc ?? photo.src}
+            srcSet={photo.cardSrcSet}
+            sizes={photo.cardSizes}
             alt={photo.title}
             width={photo.width}
             height={photo.height}
@@ -233,3 +238,5 @@ export default function PhotoMagnet({ photo, position, zIndex, index, layout, on
     </button>
   );
 }
+
+export default memo(PhotoMagnet);

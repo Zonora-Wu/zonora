@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "art:sync": "node scripts/sync-art-assets.mjs"
+    "art:sync": "node scripts/sync-art-assets.mjs",
+    "art:optimize": "node scripts/sync-art-assets.mjs",
+    "photo:optimize": "node scripts/optimize-photos.mjs"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +23,7 @@
     "postcss": "^8.5.15",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.3.0",
     "three": "^0.184.0"
   },
