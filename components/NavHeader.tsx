@@ -23,6 +23,11 @@ const navItems = navKeys.map((key, i) => ({
   key,
 }));
 
+function isNavItemActive(pathname: string, href: string) {
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+  return normalizedPath === href || normalizedPath.startsWith(`${href}/`);
+}
+
 export default function NavHeader() {
   const pathname = usePathname();
   const router = useRouter();
@@ -101,6 +106,8 @@ export default function NavHeader() {
             <li key={item.href}>
               <Link
                 href={item.href}
+                className={isNavItemActive(pathname, item.href) ? "nav__link--active" : undefined}
+                aria-current={isNavItemActive(pathname, item.href) ? "page" : undefined}
                 onPointerEnter={() => handlePrefetch(item.href)}
                 onFocus={() => handlePrefetch(item.href)}
               >

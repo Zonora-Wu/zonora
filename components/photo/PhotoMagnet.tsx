@@ -53,6 +53,7 @@ function getWallRect(element: HTMLElement) {
 function PhotoMagnet({ photo, position, index, layout, onCommitPosition, getNextZIndex, onOpen }: PhotoMagnetProps) {
   const magnetRef = useRef<HTMLButtonElement>(null);
   const pressState = useRef<PressState | null>(null);
+  const releaseFrameRef = useRef<number | null>(null);
   const liveZIndexRef = useRef(photo.layout.z ?? index + 2);
   const [isDragging, setIsDragging] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
@@ -76,6 +77,16 @@ function PhotoMagnet({ photo, position, index, layout, onCommitPosition, getNext
     if (!magnet) return;
     magnet.style.setProperty("--photo-drag-x", `${x}px`);
     magnet.style.setProperty("--photo-drag-y", `${y}px`);
+  }, []);
+
+  const commitLivePosition = useCallback((next: Position) => {
+    const magnet = magnetRef.current;
+    if (!magnet) return;
+
+    magnet.style.setProperty("--photo-x", `${next.x}%`);
+    magnet.style.setProperty("--photo-y", `${next.y}%`);
+    magnet.style.setProperty("--photo-drag-x", "0px");
+    magnet.style.setProperty("--photo-drag-y", "0px");
   }, []);
 
   const enterDragMode = useCallback(() => {
@@ -167,23 +178,23 @@ function PhotoMagnet({ photo, position, index, layout, onCommitPosition, getNext
     pressState.current = null;
 
     if (wasDragging) {
+      commitLivePosition(nextPosition);
       onCommitPosition(photo.id, nextPosition);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setLiveDragOffset(0, 0);
-          setIsDragging(false);
-        });
+      releaseFrameRef.current = requestAnimationFrame(() => {
+        releaseFrameRef.current = null;
+        setIsDragging(false);
       });
       return;
     }
 
     onOpen(photo);
-  }, [clearPressTimer, onCommitPosition, onOpen, photo, setLiveDragOffset]);
+  }, [clearPressTimer, commitLivePosition, onCommitPosition, onOpen, photo]);
 
   useEffect(() => () => {
     const state = pressState.current;
     if (state?.timerId) window.clearTimeout(state.timerId);
     if (state?.rafId !== null && state?.rafId !== undefined) window.cancelAnimationFrame(state.rafId);
+    if (releaseFrameRef.current !== null) window.cancelAnimationFrame(releaseFrameRef.current);
   }, []);
 
   return (

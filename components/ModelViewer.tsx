@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas, useLoader, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Html } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import type { Group } from "three";
 import { Box3, Vector3, PMREMGenerator, LinearSRGBColorSpace } from "three";
 
@@ -63,22 +63,45 @@ function HDRScene() {
     if (loaded.current) return;
     loaded.current = true;
 
+    let cancelled = false;
+    let envMap: ReturnType<PMREMGenerator["fromEquirectangular"]>["texture"] | null = null;
     const pmrem = new PMREMGenerator(gl);
     pmrem.compileEquirectangularShader();
 
-    new RGBELoader()
-      .setPath("/")
-      .load(HDR_ENV_URL, (texture) => {
+    new EXRLoader().load(
+      HDR_ENV_URL,
+      (texture) => {
+        if (cancelled) {
+          texture.dispose();
+          pmrem.dispose();
+          return;
+        }
+
         texture.colorSpace = LinearSRGBColorSpace;
-        const envMap = pmrem.fromEquirectangular(texture).texture;
+        envMap = pmrem.fromEquirectangular(texture).texture;
         scene.environment = envMap;
         texture.dispose();
         pmrem.dispose();
-      })
-      .onError(() => {
+      },
+      undefined,
+      () => {
         // Fallback: use a dim warm environment if HDR file fails
         scene.environmentIntensity = 1.0;
-      });
+        pmrem.dispose();
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      loaded.current = false;
+
+      if (envMap) {
+        if (scene.environment === envMap) {
+          scene.environment = null;
+        }
+        envMap.dispose();
+      }
+    };
   }, [scene, gl]);
 
   return null;

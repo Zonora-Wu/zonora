@@ -207,7 +207,6 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
       onPointerCancel={finishWallDrag}
     >
       <div className="photo-page__intro container">
-        <p className="art-page__eyebrow">Magnetic darkroom</p>
         <h1 className="page-title page-title--spacious">摄影</h1>
         <p className="page-lead photo-page__lead">
           按地区整理的旅行影像。左右切换省份，长按拖拽照片重新贴上，点击查看大图。
