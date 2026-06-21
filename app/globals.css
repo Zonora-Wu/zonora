@@ -312,13 +312,23 @@ a:hover {
 .article-toc nav {
   position: sticky;
   top: calc(7.5rem + var(--safe-top));
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--fg) 14%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg) 94%, var(--fg));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg) 72%, transparent);
+}
+
+.article-toc__scroll {
   max-height: calc(100svh - 10rem);
   overflow-y: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   padding: 1rem 0;
-  border: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--bg) 96%, var(--fg));
+  overscroll-behavior: contain;
+}
+
+.article-toc__scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .article-toc__title {
@@ -593,6 +603,9 @@ a:hover {
   .article-toc nav {
     position: relative;
     top: auto;
+  }
+
+  .article-toc__scroll {
     max-height: min(22rem, 42svh);
   }
 
@@ -607,8 +620,11 @@ a:hover {
 }
 
 @media (max-width: 700px) {
-  .article-toc nav {
+  .article-toc__scroll {
     padding: 1rem 1.1rem;
+  }
+
+  .article-toc nav {
     border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
     background: color-mix(in srgb, var(--fg) 2.5%, transparent);
   }

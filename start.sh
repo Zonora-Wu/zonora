@@ -28,7 +28,8 @@ else
   log_success "依赖已存在"
 fi
 
-# 启动
+# 启动。开发服务器包装脚本会在 Ctrl+C、终端关闭或收到终止信号时，
+# 清理 Next.js 及其所有 worker，避免残留进程继续占用端口和内存。
 log_info "启动开发服务器 (http://localhost:3000)..."
 echo ""
 npm run dev

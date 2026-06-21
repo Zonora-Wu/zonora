@@ -36,23 +36,25 @@ export default function ArticleToc({ headings }: { headings: Heading[] }) {
   return (
     <aside className="article-toc">
       <nav aria-label="文章章节导航">
-        <p className="article-toc__title">目录</p>
-        <ol>
-          {headings.map((heading) => (
-            <li
-              key={heading.id}
-              className={`article-toc__item article-toc__item--level-${heading.level}`}
-            >
-              <a
-                href={`#${heading.id}`}
-                className={activeId === heading.id ? "article-toc__link--active" : undefined}
-                aria-current={activeId === heading.id ? "location" : undefined}
+        <div className="article-toc__scroll">
+          <p className="article-toc__title">目录</p>
+          <ol>
+            {headings.map((heading) => (
+              <li
+                key={heading.id}
+                className={`article-toc__item article-toc__item--level-${heading.level}`}
               >
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ol>
+                <a
+                  href={`#${heading.id}`}
+                  className={activeId === heading.id ? "article-toc__link--active" : undefined}
+                  aria-current={activeId === heading.id ? "location" : undefined}
+                >
+                  {heading.text}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
       </nav>
     </aside>
   );
