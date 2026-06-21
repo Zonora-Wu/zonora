@@ -2,6 +2,12 @@ import Link from "next/link";
 
 const allPosts = [
   {
+    slug: "rtx5070-local-llm-claude-code-hermes-agent",
+    title: "RTX 5070 12GB 本地跑大模型实测：接入 Claude Code 与 Hermes Agent",
+    date: "2026-06-21",
+    excerpt: "实测 llama.exe、Ollama、LM Studio，并接入 Claude Code 与 Hermes Agent 的本地大模型工作流。",
+  },
+  {
     slug: "hello-world",
     title: "你好，世界",
     date: "2026-06-01",

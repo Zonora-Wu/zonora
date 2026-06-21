@@ -1,10 +1,22 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import MarkdownArticle from "@/components/MarkdownArticle";
 
 const posts: Record<
   string,
-  { title: string; date: string; content: string }
+  { title: string; date: string; content: string; structured?: boolean }
 > = {
+  "rtx5070-local-llm-claude-code-hermes-agent": {
+    title: "RTX 5070 12GB 本地跑大模型实测：接入 Claude Code 与 Hermes Agent",
+    date: "2026-06-21",
+    content: readFileSync(
+      join(process.cwd(), "data/blog/rtx5070-local-llm-claude-code-hermes-agent.md"),
+      "utf8"
+    ),
+    structured: true,
+  },
   "hello-world": {
     title: "你好，世界",
     date: "2026-06-01",
@@ -82,6 +94,21 @@ export default async function BlogPost({
 
   if (!post) {
     notFound();
+  }
+
+  if (post.structured) {
+    return (
+      <article className="page-section article-page article-page--with-toc">
+        <MarkdownArticle
+          markdown={post.content}
+          header={
+            <header className="article-header">
+              <h1 className="article-title">{post.title}</h1>
+            </header>
+          }
+        />
+      </article>
+    );
   }
 
   return (
