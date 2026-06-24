@@ -33,3 +33,10 @@ fi
 log_info "启动开发服务器 (http://localhost:3000)..."
 echo ""
 npm run dev
+# 以后更新 zonora 的命令
+# 以后 GitHub main-v2 更新后，只执行：
+# cd /home/ubuntu/projcets/zonora
+# git fetch origin main-v2
+# git reset --hard origin/main-v2
+# docker compose up -d --build
+# docker image prune -f
