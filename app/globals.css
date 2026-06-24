@@ -1217,6 +1217,23 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   align-items: start;
 }
 
+.home-globe-shell {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.home-globe-fade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  animation: home-globe-fade-in 1.35s linear 0.08s forwards;
+  will-change: opacity;
+}
+
 .typewriter-title {
   font-size: clamp(2.5rem, 6vw, 5rem);
   font-weight: 900;
@@ -1311,6 +1328,23 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   }
 
   50% {
+    opacity: 1;
+  }
+}
+
+@keyframes home-globe-fade-in {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-globe-fade {
+    animation: none;
     opacity: 1;
   }
 }

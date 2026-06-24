@@ -18,9 +18,13 @@ export default function GlobeSceneWrapper() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  if (!shouldMount) {
-    return <div className="webgl-deferred-placeholder webgl-deferred-placeholder--home" aria-hidden="true" />;
-  }
-
-  return <GlobeScene />;
+  return (
+    <div className="home-globe-shell" aria-hidden="true">
+      {shouldMount ? (
+        <div className="home-globe-fade">
+          <GlobeScene />
+        </div>
+      ) : null}
+    </div>
+  );
 }
