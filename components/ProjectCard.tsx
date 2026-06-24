@@ -41,11 +41,11 @@ export default function ProjectCard({
     <Link
       ref={cardRef}
       href={`/projects/${slug}`}
-      style={{ textDecoration: "none", transition: "transform 0.3s ease-out" }}
+      className="project-card-link"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      <article className="model-card">
+      <article className="model-card project-card">
         <div className="model-card-thumb">
           {image ? (
             <img src={image} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
