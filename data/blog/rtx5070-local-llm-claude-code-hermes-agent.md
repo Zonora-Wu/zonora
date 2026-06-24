@@ -1,3 +1,9 @@
+---
+title: RTX 5070 12GB 本地跑大模型实测：接入 Claude Code 与 Hermes Agent
+date: 2026-06-21
+excerpt: 实测 llama.exe、Ollama、LM Studio，并接入 Claude Code 与 Hermes Agent 的本地大模型工作流。
+---
+
 # RTX 5070 12GB + 32GB 内存本地跑大模型实测：llama.exe、Ollama、LM Studio 接入 Claude Code 与 Hermes Agent
 
 ## 前言
