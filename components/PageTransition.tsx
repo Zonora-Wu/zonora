@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 const EXIT_DURATION = 480;
 const ENTER_DURATION = 820;
-const ROUTE_ORDER = ["/home", "/blog", "/projects", "/models", "/art", "/photo", "/contact"];
+const ROUTE_ORDER = ["/", "/blog", "/projects", "/models", "/art", "/photo", "/contact"];
 
 type TransitionPhase = "entering" | "idle" | "exiting";
 type TransitionDirection = "forward" | "backward";
@@ -25,8 +25,15 @@ function isPlainLeftClick(event: MouseEvent) {
 }
 
 function routeIndex(path: string) {
-  const matched = ROUTE_ORDER.findIndex((route) => path === route || path.startsWith(`${route}/`));
+  const normalizedPath = path.replace(/\/+$/, "") || "/";
+  if (normalizedPath === "/home") return 0;
+  const matched = ROUTE_ORDER.findIndex((route) => normalizedPath === route || normalizedPath.startsWith(`${route}/`));
   return matched === -1 ? 0 : matched;
+}
+
+function isHomePath(path: string) {
+  const normalizedPath = path.replace(/\/+$/, "") || "/";
+  return normalizedPath === "/" || normalizedPath === "/home";
 }
 
 function getDirection(fromPath: string, toPath: string): TransitionDirection {
@@ -141,7 +148,7 @@ export default function PageTransition({ children }: { children: ReactNode }) {
       data-transition-phase={phase}
       data-transition-direction={direction}
     >
-      <div className={`page-transition-view ${pathname === "/home" || pathname === "/home/" ? "page-transition-view--home" : ""}`} key={pathname}>
+      <div className={`page-transition-view ${isHomePath(pathname) ? "page-transition-view--home" : ""}`} key={pathname}>
         {children}
       </div>
     </main>

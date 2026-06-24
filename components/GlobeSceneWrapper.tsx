@@ -1,21 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import GlobeScene from "@/components/GlobeScene";
 
-function GlobeSceneLoading() {
-  return <div className="webgl-deferred-placeholder webgl-deferred-placeholder--home" aria-hidden="true" />;
-}
+const WEBGL_MOUNT_DELAY = 200;
+
+const GlobeScene = dynamic(() => import("@/components/GlobeScene"), { ssr: false });
 
 export default function GlobeSceneWrapper() {
-  const [mounted, setMounted] = useState(false);
+  const [shouldMount, setShouldMount] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => {
+      setShouldMount(true);
+    }, WEBGL_MOUNT_DELAY);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
-  if (!mounted) {
-    return <GlobeSceneLoading />;
+  if (!shouldMount) {
+    return <div className="webgl-deferred-placeholder webgl-deferred-placeholder--home" aria-hidden="true" />;
   }
 
   return <GlobeScene />;

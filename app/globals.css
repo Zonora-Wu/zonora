@@ -2,9 +2,9 @@
 
 @font-face {
   font-family: "Smiley Sans";
-  src: url("/fonts/SmileySans-Oblique.woff2") format("woff2");
+  src: url("/fonts/SmileySans-Subset.woff2") format("woff2");
   font-weight: 400 900;
-  font-style: oblique;
+  font-style: normal;
   font-display: swap;
 }
 

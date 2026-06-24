@@ -32,6 +32,15 @@ function wrapIndex(index: number, length: number) {
   return (index + length) % length;
 }
 
+function shufflePhotos<T>(items: T[]) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
 export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
   const wallRef = useRef<HTMLDivElement>(null);
   const wallDrag = useRef<WallDragState | null>(null);
@@ -42,9 +51,13 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
   const [positions, setPositions] = useState<Record<string, Position>>({});
   const [photoLayout, setPhotoLayout] = useState<PhotoLayoutResult[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null);
+  const [photoSet, setPhotoSet] = useState(() => ({
+    regionId: regions[0]?.id ?? "",
+    photos: regions[0]?.photos ?? [],
+  }));
 
   const region = regions[regionIndex];
-  const photos = region.photos;
+  const photos = photoSet.regionId === region.id ? photoSet.photos : region.photos;
 
   const goRegion = useCallback((direction: -1 | 1) => {
     setRegionIndex((current) => wrapIndex(current + direction, regions.length));
@@ -120,8 +133,13 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
   useEffect(() => {
     setSelectedPhoto(null);
     setPositions({});
+    setPhotoLayout([]);
+    setPhotoSet({
+      regionId: region.id,
+      photos: shufflePhotos(region.photos),
+    });
     hasMeasuredWall.current = false;
-  }, [regionIndex]);
+  }, [region.id, region.photos]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

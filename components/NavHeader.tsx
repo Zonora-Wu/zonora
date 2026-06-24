@@ -19,19 +19,29 @@ function markNavRevealed() {
 const navKeys = ["首页", "博客", "项目", "模型", "绘画", "摄影", "联系"];
 
 const navItems = navKeys.map((key, i) => ({
-  href: ["/home", "/blog", "/projects", "/models", "/art", "/photo", "/contact"][i],
+  href: ["/", "/blog", "/projects", "/models", "/art", "/photo", "/contact"][i],
   key,
 }));
 
+function normalizePath(pathname: string) {
+  return pathname.replace(/\/+$/, "") || "/";
+}
+
+function isHomePath(pathname: string) {
+  const normalizedPath = normalizePath(pathname);
+  return normalizedPath === "/" || normalizedPath === "/home";
+}
+
 function isNavItemActive(pathname: string, href: string) {
-  const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+  const normalizedPath = normalizePath(pathname);
+  if (href === "/") return isHomePath(pathname);
   return normalizedPath === href || normalizedPath.startsWith(`${href}/`);
 }
 
 export default function NavHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const isHome = pathname === "/home";
+  const isHome = isHomePath(pathname);
   const [revealed, setRevealed] = useState(_navRevealed);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { t } = useLang();
@@ -147,7 +157,7 @@ export default function NavHeader() {
         }}
       >
         <Link
-          href="/home"
+          href="/"
           className="logo"
           prefetch
         >
