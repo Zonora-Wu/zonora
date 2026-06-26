@@ -3,6 +3,7 @@ import ThemeProvider from "@/components/ThemeProvider";
 import LangProvider from "@/components/LangProvider";
 import NavHeader from "@/components/NavHeader";
 import PageTransition from "@/components/PageTransition";
+import InitialPageLoader from "@/components/InitialPageLoader";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <InitialPageLoader />
         <ThemeProvider>
           <LangProvider>
             <NavHeader />

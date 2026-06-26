@@ -231,6 +231,52 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
         </p>
       </div>
 
+      <div className="photo-region-meta">
+        <div className="photo-region-hero">
+          <button
+            type="button"
+            className="photo-region-switch photo-region-switch--prev"
+            onClick={() => goRegion(-1)}
+            aria-label="切换到上一个地区"
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+
+          <div className="photo-region-hero__copy" key={region.id}>
+            <span className="photo-region-hero__index">
+              {String(regionIndex + 1).padStart(2, "0")} / {String(regions.length).padStart(2, "0")}
+            </span>
+            <h2>{region.name}</h2>
+            <span className="photo-region-hero__subtitle">{region.subtitle}</span>
+            <span className="photo-region-hero__divider" />
+            <p className="photo-region-hero__description">{region.description}</p>
+          </div>
+
+          <button
+            type="button"
+            className="photo-region-switch photo-region-switch--next"
+            onClick={() => goRegion(1)}
+            aria-label="切换到下一个地区"
+          >
+            <span aria-hidden="true">›</span>
+          </button>
+        </div>
+
+        <div className="photo-region-tabs" aria-label="地区列表">
+          {regions.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`photo-region-tab ${index === regionIndex ? "photo-region-tab--active" : ""}`}
+              onClick={() => setRegionIndex(index)}
+              aria-pressed={index === regionIndex}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="photo-wall-shell">
         <div
           ref={wallRef}
@@ -262,34 +308,6 @@ export default function PhotoRegionWall({ regions }: PhotoRegionWallProps) {
               <span>等待贴上第一张来自 {region.name} 的照片</span>
             </div>
           )}
-        </div>
-      </div>
-
-      <div className="photo-region-meta">
-        <div className="photo-region-hero">
-          <div className="photo-region-hero__copy" key={region.id}>
-            <span className="photo-region-hero__index">
-              {String(regionIndex + 1).padStart(2, "0")} / {String(regions.length).padStart(2, "0")}
-            </span>
-            <h2>{region.name}</h2>
-            <span className="photo-region-hero__subtitle">{region.subtitle}</span>
-            <span className="photo-region-hero__divider" />
-            <p className="photo-region-hero__description">{region.description}</p>
-          </div>
-        </div>
-
-        <div className="photo-region-tabs" aria-label="地区列表">
-          {regions.map((item, index) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`photo-region-tab ${index === regionIndex ? "photo-region-tab--active" : ""}`}
-              onClick={() => setRegionIndex(index)}
-              aria-pressed={index === regionIndex}
-            >
-              {item.name}
-            </button>
-          ))}
         </div>
       </div>
 

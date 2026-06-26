@@ -343,10 +343,10 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
   ), [handleMouseEnter, handleMouseMove, handleMouseLeave]);
 
   return (
-    <div className="art-gallery" aria-label="绘画作品横向展墙">
+    <div className="art-gallery" aria-label="绘画作品展墙">
       <div className="art-gallery__header">
         <span>{sketches.length} works</span>
-        <span className="art-gallery__hint">滚轮横向浏览 · 点击页面或按任意键缓慢停下 · 点击画作查看大图</span>
+        <span className="art-gallery__hint">桌面滚轮横向浏览 · 手机纵向浏览 · 点击画作查看大图</span>
       </div>
 
       <div className="art-gallery__shell" onWheel={handleWheel}>
@@ -354,7 +354,7 @@ export default function ArtGallery({ sketches }: ArtGalleryProps) {
           ref={scrollerRef}
           className="art-gallery__scroller"
           onScroll={handleScroll}
-          aria-label="横向滚动画廊"
+          aria-label="绘画作品画廊"
         >
           <div className="art-gallery__track">
             {Array.from({ length: REPEAT }, (_, rep) => (
