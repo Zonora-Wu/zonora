@@ -3817,7 +3817,7 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 
   .art-work {
     --art-row-height: clamp(7.5rem, 29vw, 10rem);
-    width: clamp(6.25rem, var(--art-fluid-width), 19rem);
+    width: min(100%, 25rem);
   }
 
   .photo-page {
@@ -3908,14 +3908,26 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 }
 
 @media (max-width: 760px) {
+  .art-gallery__shell::before,
+  .art-gallery__shell::after {
+    display: none;
+  }
+
+  .art-gallery__segment {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .art-gallery__row {
-    justify-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.35rem;
+    justify-items: center;
   }
 
   .art-work {
-    width: 100%;
-    max-width: none;
-    margin-inline: 0;
+    width: min(100%, 25rem);
+    max-width: 25rem;
+    margin-inline: auto;
   }
 
   .art-work__button {
