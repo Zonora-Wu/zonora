@@ -1136,11 +1136,11 @@ html[data-route-transition-phase="entering"] .page-transition-view {
 }
 
 .app-loader--leaving {
-  animation: loader-minimal-leave 420ms ease forwards;
+  animation: loader-minimal-leave 600ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .app-loader--leaving .app-loader__panel {
-  animation: none;
+  animation: loader-minimal-panel-leave 600ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes loader-minimal-mark {
@@ -1166,6 +1166,17 @@ html[data-route-transition-phase="entering"] .page-transition-view {
   to {
     opacity: 0;
     visibility: hidden;
+  }
+}
+
+@keyframes loader-minimal-panel-leave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
   }
 }
 
