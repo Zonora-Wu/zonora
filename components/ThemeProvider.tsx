@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 
 type Theme = "light" | "dark";
 
+const THEME_TRANSITION_MS = 620;
+
 const ThemeContext = createContext<{
   theme: Theme;
   toggle: () => void;
@@ -35,8 +37,27 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
 
   // Apply theme class
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
+    const root = document.documentElement;
+    const currentTheme = root.getAttribute("data-theme");
+    const shouldAnimate = currentTheme === "light" || currentTheme === "dark";
+    let transitionTimer: number | null = null;
+
+    if (shouldAnimate && currentTheme !== theme) {
+      root.dataset.themeTransitioning = theme;
+      transitionTimer = window.setTimeout(() => {
+        delete root.dataset.themeTransitioning;
+      }, THEME_TRANSITION_MS);
+    }
+
+    root.setAttribute("data-theme", theme);
     localStorage.setItem("zonora-theme", theme);
+
+    return () => {
+      if (transitionTimer !== null) {
+        window.clearTimeout(transitionTimer);
+        delete root.dataset.themeTransitioning;
+      }
+    };
   }, [theme]);
 
   // Listen for system preference changes
