@@ -2069,9 +2069,12 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 }
 
 .model-detail__layout {
+  --model-drawer-duration: 520ms;
+  --model-drawer-ease: cubic-bezier(0.22, 1, 0.36, 1);
   display: grid;
   grid-template-columns: minmax(0, 7fr) 2.75rem minmax(16rem, 3fr);
   align-items: stretch;
+  transition: grid-template-columns var(--model-drawer-duration) var(--model-drawer-ease);
 }
 
 .model-detail__layout--collapsed {
@@ -2101,7 +2104,9 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   border-radius: 999px;
   background: currentColor;
   opacity: 0.35;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 260ms ease,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .model-detail__toggle:hover .model-detail__toggle-handle,
@@ -2113,16 +2118,36 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 .model-detail__info {
   overflow: hidden;
   opacity: 1;
-  transition: opacity 0.25s ease;
+  transform: translateX(0);
+  transition:
+    opacity 320ms ease 90ms,
+    transform var(--model-drawer-duration) var(--model-drawer-ease);
 }
 
 .model-detail__layout--collapsed .model-detail__info {
   opacity: 0;
   pointer-events: none;
+  transform: translateX(1.1rem);
+  transition:
+    opacity 180ms ease,
+    transform 360ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .model-detail__info-inner {
   padding-left: clamp(0.25rem, 1vw, 0.75rem);
+  min-width: min(24rem, calc(100vw - 2 * var(--content-gutter)));
+  transform: translateX(0);
+  transition:
+    opacity 300ms ease 120ms,
+    transform var(--model-drawer-duration) var(--model-drawer-ease);
+}
+
+.model-detail__layout--collapsed .model-detail__info-inner {
+  opacity: 0;
+  transform: translateX(1rem);
+  transition:
+    opacity 160ms ease,
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .model-detail__title {
@@ -2173,22 +2198,67 @@ html[data-route-transition-phase] .webgl-glass-header::after {
   .model-detail__layout,
   .model-detail__layout--collapsed {
     grid-template-columns: minmax(0, 1fr);
-    gap: 1.25rem;
+    grid-template-rows: auto 2.75rem minmax(0, 1fr);
+    gap: 0;
+    transition: grid-template-rows var(--model-drawer-duration) var(--model-drawer-ease);
+  }
+
+  .model-detail__layout--collapsed {
+    grid-template-rows: auto 2.75rem minmax(0, 0fr);
   }
 
   .model-detail__toggle {
-    display: none;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    margin-block: 0.3rem 0.1rem;
   }
 
-  .model-detail__info,
+  .model-detail__toggle-handle {
+    width: min(5.5rem, 30vw);
+    height: 3px;
+    transform: scaleX(1);
+  }
+
+  .model-detail__toggle:hover .model-detail__toggle-handle,
+  .model-detail__toggle:focus-visible .model-detail__toggle-handle {
+    transform: scaleX(1.08);
+  }
+
+  .model-detail__info {
+    min-height: 0;
+    max-height: 28rem;
+    overflow: hidden;
+    transform: translateY(0);
+    transition:
+      max-height var(--model-drawer-duration) var(--model-drawer-ease),
+      opacity 320ms ease 90ms,
+      transform var(--model-drawer-duration) var(--model-drawer-ease);
+  }
+
   .model-detail__layout--collapsed .model-detail__info {
-    overflow: visible;
-    opacity: 1;
-    pointer-events: auto;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-0.9rem);
+    transition:
+      max-height 360ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 180ms ease,
+      transform 360ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .model-detail__info-inner {
     padding-left: 0;
+    min-width: 0;
+    padding-top: 0.8rem;
+    transform: translateY(0);
+  }
+
+  .model-detail__layout--collapsed .model-detail__info-inner {
+    transform: translateY(-0.5rem);
   }
 
   .webgl-deferred-placeholder--laptop {
@@ -2209,6 +2279,16 @@ html[data-route-transition-phase] .webgl-glass-header::after {
 
   .model-detail__spec dd {
     text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .model-detail__layout,
+  .model-detail__info,
+  .model-detail__info-inner,
+  .model-detail__toggle-handle {
+    transition-duration: 1ms;
+    transition-delay: 0ms;
   }
 }
 

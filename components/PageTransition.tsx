@@ -2,9 +2,11 @@
 
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { waitForViewportReadiness } from "@/components/viewportReadiness";
 
 const EXIT_DURATION = 480;
 const ENTER_DURATION = 820;
+const ENTER_READY_TIMEOUT = 7000;
 const ROUTE_ORDER = ["/", "/blog", "/projects", "/models", "/art", "/photo", "/contact"];
 
 type TransitionPhase = "entering" | "idle" | "exiting";
@@ -73,11 +75,17 @@ export default function PageTransition({ children }: { children: ReactNode }) {
     clearTransitionTimer();
 
     exitingTo.current = null;
+    let cancelled = false;
 
     if (prefersReducedMotion()) {
-      setPhase("idle");
-      window.dispatchEvent(new CustomEvent("route-transition-idle"));
-      return;
+      waitForViewportReadiness({ timeoutMs: ENTER_READY_TIMEOUT }).then(() => {
+        if (cancelled) return;
+        setPhase("idle");
+        window.dispatchEvent(new CustomEvent("route-transition-idle"));
+      });
+      return () => {
+        cancelled = true;
+      };
     }
 
     setPhase("entering");
@@ -85,13 +93,24 @@ export default function PageTransition({ children }: { children: ReactNode }) {
       window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }
 
-    transitionTimer.current = window.setTimeout(() => {
+    const minimumEnter = new Promise<void>((resolve) => {
+      transitionTimer.current = window.setTimeout(() => {
+        transitionTimer.current = null;
+        resolve();
+      }, ENTER_DURATION);
+    });
+
+    Promise.all([
+      minimumEnter,
+      waitForViewportReadiness({ timeoutMs: ENTER_READY_TIMEOUT }),
+    ]).then(() => {
+      if (cancelled) return;
       setPhase("idle");
       window.dispatchEvent(new CustomEvent("route-transition-idle"));
-      transitionTimer.current = null;
-    }, ENTER_DURATION);
+    });
 
     return () => {
+      cancelled = true;
       clearTransitionTimer();
     };
   }, [pathname]);

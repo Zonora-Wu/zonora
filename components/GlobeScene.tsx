@@ -4,6 +4,10 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 
+type GlobeSceneProps = {
+  onReady?: () => void;
+};
+
 const mousePos = { x: 0, y: 0 };
 let lastMouseTime = 0;
 
@@ -95,7 +99,24 @@ function StarField() {
   );
 }
 
-export default function GlobeScene() {
+function FirstFrameReady({ onReady }: GlobeSceneProps) {
+  const frameCount = useRef(0);
+  const hasReported = useRef(false);
+
+  useFrame(() => {
+    if (hasReported.current) return;
+    frameCount.current += 1;
+
+    if (frameCount.current >= 2) {
+      hasReported.current = true;
+      onReady?.();
+    }
+  });
+
+  return null;
+}
+
+export default function GlobeScene({ onReady }: GlobeSceneProps) {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       mousePos.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -116,6 +137,7 @@ export default function GlobeScene() {
       <ambientLight intensity={0.3} />
       <Globe />
       <StarField />
+      <FirstFrameReady onReady={onReady} />
     </Canvas>
   );
 }

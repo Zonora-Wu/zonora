@@ -9,6 +9,7 @@ const GlobeScene = dynamic(() => import("@/components/GlobeScene"), { ssr: false
 
 export default function GlobeSceneWrapper() {
   const [shouldMount, setShouldMount] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -19,10 +20,14 @@ export default function GlobeSceneWrapper() {
   }, []);
 
   return (
-    <div className="home-globe-shell" aria-hidden="true">
+    <div
+      className="home-globe-shell"
+      data-loader-pending={isReady ? undefined : "home-globe"}
+      aria-hidden="true"
+    >
       {shouldMount ? (
         <div className="home-globe-fade">
-          <GlobeScene />
+          <GlobeScene onReady={() => setIsReady(true)} />
         </div>
       ) : null}
     </div>
