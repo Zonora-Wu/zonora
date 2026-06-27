@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -15,11 +15,10 @@ const KEY_RELEASE_SECONDS = 0.14
 
 let laptopModelPromise: Promise<THREE.Group> | null = null
 let environmentTexturePromise: Promise<THREE.DataTexture> | null = null
-let environmentMapPromise: Promise<THREE.ColorManagement> | null = null
+let environmentMapPromise: Promise<THREE.Texture> | null = null
 
 // Module-level PMREM cache: load EXR once, convert to PMREM once, reuse across remounts
 let cachedPMREM: THREE.Texture | null = null
-let pmremGenerating = false
 
 // Exports for external consumers (e.g., preload)
 export { loadLaptopModel, loadEnvironmentTexture }
@@ -31,6 +30,7 @@ type LaptopSceneProps = {
   dragRotation: { x: number; y: number }
   lidOpen: boolean
   onKeyboardPress: () => void
+  onModelReady: () => void
   theme: SceneTheme
 }
 
@@ -68,20 +68,31 @@ type CanvasBounds = {
   top: number
 }
 
+type KaliLaptopShowcaseProps = {
+  onReady?: () => void
+}
+
 export function preloadKaliLaptopShowcaseResources() {
   void loadLaptopModel()
   void loadEnvironmentTexture()
 }
 
-export function KaliLaptopShowcase() {
+export function KaliLaptopShowcase({ onReady }: KaliLaptopShowcaseProps = {}) {
   const sceneRef = useRef<HTMLDivElement | null>(null)
   const pointerRef = useRef<PointerState>({ dragging: false, lastX: 0, lastY: 0, travel: 0 })
   const suppressNextClickRef = useRef(false)
+  const readyFrameRef = useRef<number | null>(null)
   const [canvasBounds, setCanvasBounds] = useState<CanvasBounds>(() => getBaseCanvasBounds())
+  const [canvasReady, setCanvasReady] = useState(false)
   const [dragRotation, setDragRotation] = useState({ x: 0, y: 0 })
+  const [environmentReady, setEnvironmentReady] = useState(Boolean(cachedPMREM))
   const [lidOpen, setLidOpen] = useState(false)
+  const [modelReady, setModelReady] = useState(false)
   const [zoom, setZoom] = useState(0)
   const theme = useSceneTheme()
+  const sceneReady = canvasReady && environmentReady && modelReady
+  const handleEnvironmentReady = useCallback(() => setEnvironmentReady(true), [])
+  const handleModelReady = useCallback(() => setModelReady(true), [])
 
   useEffect(() => {
     let frame = 0
@@ -105,12 +116,33 @@ export function KaliLaptopShowcase() {
 
     update()
     window.addEventListener('resize', requestUpdate)
+    const resizeObserver = new ResizeObserver(requestUpdate)
+    if (sceneRef.current) resizeObserver.observe(sceneRef.current)
 
     return () => {
       window.removeEventListener('resize', requestUpdate)
+      resizeObserver.disconnect()
       if (frame) window.cancelAnimationFrame(frame)
     }
   }, [])
+
+  useEffect(() => {
+    if (!sceneReady) return
+
+    readyFrameRef.current = window.requestAnimationFrame(() => {
+      readyFrameRef.current = window.requestAnimationFrame(() => {
+        readyFrameRef.current = null
+        onReady?.()
+      })
+    })
+
+    return () => {
+      if (readyFrameRef.current !== null) {
+        window.cancelAnimationFrame(readyFrameRef.current)
+        readyFrameRef.current = null
+      }
+    }
+  }, [onReady, sceneReady])
 
   useEffect(() => {
     const el = sceneRef.current
@@ -125,17 +157,17 @@ export function KaliLaptopShowcase() {
 
   return (
     <div
-      className="relative z-[80] mx-auto h-[420px] max-w-7xl overflow-visible md:h-[480px]"
+      className="laptop-showcase"
+      data-showcase-ready={sceneReady ? "true" : "false"}
+      data-loader-pending={sceneReady ? undefined : "laptop-showcase"}
       ref={sceneRef}
-      style={{
-        background: 'rgba(0,0,0,0.2)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: '12px',
-      }}
     >
+      <div className="laptop-showcase__status" aria-hidden={sceneReady}>
+        <span>Loading model</span>
+      </div>
       <div
         aria-label="ROG 笔记本电脑 3D 模型展示，可拖动查看"
-        className="absolute inset-0 z-[90] cursor-grab touch-none select-none active:cursor-grabbing"
+        className="laptop-showcase__stage"
         onPointerCancel={stopDragging}
         onPointerDown={(event) => {
           pointerRef.current = { dragging: true, lastX: event.clientX, lastY: event.clientY, travel: 0 }
@@ -176,9 +208,16 @@ export function KaliLaptopShowcase() {
             gl.outputColorSpace = THREE.SRGBColorSpace
             gl.toneMapping = THREE.ACESFilmicToneMapping
             gl.toneMappingExposure = theme === 'dark' ? 1.05 : 0.92
+            setCanvasReady(true)
           }}
         >
-          <ExrEnvironment exposure={theme === 'dark' ? 1.05 : 0.92} />
+          <hemisphereLight args={['#e8fff4', '#16100d', theme === 'dark' ? 1.15 : 0.75]} />
+          <directionalLight position={[4, 5, 4]} intensity={theme === 'dark' ? 2.2 : 1.45} color="#fff6dd" />
+          <directionalLight position={[-3, 2, -5]} intensity={theme === 'dark' ? 0.9 : 0.45} color="#91fff0" />
+          <ExrEnvironment
+            exposure={theme === 'dark' ? 1.05 : 0.92}
+            onEnvironmentReady={handleEnvironmentReady}
+          />
           <CameraZoom zoom={zoom} />
           <LaptopScene
             baseCanvasHeight={canvasBounds.baseHeight}
@@ -188,6 +227,7 @@ export function KaliLaptopShowcase() {
               suppressNextClickRef.current = true
               pointerRef.current.travel = 999
             }}
+            onModelReady={handleModelReady}
             theme={theme}
           />
         </Canvas>
@@ -262,44 +302,42 @@ function getCanvasBounds(sceneRect: DOMRect): CanvasBounds {
   }
 }
 
-function ExrEnvironment({ exposure }: { exposure: number }) {
+function ExrEnvironment({
+  exposure,
+  onEnvironmentReady,
+}: {
+  exposure: number
+  onEnvironmentReady: () => void
+}) {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
 
   useEffect(() => {
     let disposed = false
 
-    // If PMREM is not yet generated, kick it off at module level (once)
-    if (!pmremGenerating && !cachedPMREM) {
-      pmremGenerating = true
-      loadEnvironmentTexture()
-        .then((texture) => {
-          const pmrem = new THREE.PMREMGenerator(gl)
-          pmrem.compileEquirectangularShader()
-          const envMap = pmrem.fromEquirectangular(texture).texture
-          pmrem.dispose()
-          texture.dispose()
-          cachedPMREM = envMap
-          scene.environment = envMap  // ✅ 生成后设置到场景
-          pmremGenerating = false
-        })
-        .catch((err) => {
-          console.error('Failed to generate PMREM from EXR:', err)
-          pmremGenerating = false
-        })
-    } else {
-      // ✅ 已缓存则直接设置
-      scene.environment = cachedPMREM
+    const applyEnvironment = (envMap: THREE.Texture | null) => {
+      if (disposed || !envMap) return
+      scene.environment = envMap
+      scene.environmentRotation.y = THREE.MathUtils.degToRad(ENVIRONMENT_ROTATION_Y_DEGREES)
+      if ('environmentIntensity' in scene) {
+        scene.environmentIntensity = 1.22
+      }
+      onEnvironmentReady()
     }
 
-    scene.environmentRotation.y = THREE.MathUtils.degToRad(ENVIRONMENT_ROTATION_Y_DEGREES)
+    loadEnvironmentMap(gl)
+      .then(applyEnvironment)
+      .catch((err) => {
+        console.error('Failed to generate PMREM from EXR:', err)
+        onEnvironmentReady()
+      })
 
     return () => {
       disposed = true
       // Only dispose if this is the last Canvas using it
       if (!cachedPMREM) return
     }
-  }, [gl, scene])
+  }, [gl, onEnvironmentReady, scene])
 
   useEffect(() => {
     gl.toneMappingExposure = exposure
@@ -313,6 +351,7 @@ function LaptopScene({
   dragRotation,
   lidOpen,
   onKeyboardPress,
+  onModelReady,
   theme,
 }: LaptopSceneProps) {
   const groupRef = useRef<THREE.Group | null>(null)
@@ -342,6 +381,7 @@ function LaptopScene({
         lidRef.current = normalized.lid
         lidClosedRotationXRef.current = normalized.lid?.rotation.x ?? 0
         setModel(normalized.root)
+        onModelReady()
       })
       .catch(() => {
         // Model load failure — user will see empty scene
@@ -350,7 +390,7 @@ function LaptopScene({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [onModelReady])
 
   useEffect(() => {
     if (!model) return
@@ -513,6 +553,22 @@ function loadEnvironmentTexture() {
   return environmentTexturePromise
 }
 
+function loadEnvironmentMap(gl: THREE.WebGLRenderer) {
+  if (cachedPMREM) return Promise.resolve(cachedPMREM)
+
+  environmentMapPromise ??= loadEnvironmentTexture().then((texture) => {
+    const pmrem = new THREE.PMREMGenerator(gl)
+    pmrem.compileEquirectangularShader()
+    const envMap = pmrem.fromEquirectangular(texture).texture
+    pmrem.dispose()
+    texture.dispose()
+    cachedPMREM = envMap
+    return envMap
+  })
+
+  return environmentMapPromise
+}
+
 function findKeyboardKey(object: THREE.Object3D): THREE.Object3D | null {
   let current: THREE.Object3D | null = object
 
@@ -547,8 +603,8 @@ function normalizeLaptopModel(source: THREE.Group): LaptopModel {
     const materials = Array.isArray(object.material) ? object.material : [object.material]
     materials.forEach((material) => {
       if (!material || !(material instanceof THREE.MeshStandardMaterial)) return
-      material.envMapIntensity = 0.72
-      material.roughness = Math.max(material.roughness, 0.28)
+      material.envMapIntensity = 1.05
+      material.roughness = THREE.MathUtils.clamp(material.roughness, 0.24, 0.58)
       material.metalness = Math.min(material.metalness, 0.86)
     })
   })
@@ -605,20 +661,20 @@ function applyMaterialTheme(material: THREE.MeshStandardMaterial, theme: SceneTh
     material.roughness = isDark ? 0.34 : 0.48
     material.metalness = 0
   } else if (name.includes('laptopsurface') || name.includes('painted') || name.includes('logo')) {
-    material.color = new THREE.Color(isDark ? '#151d1b' : '#d7ded2')
-    material.metalness = isDark ? 0.72 : 0.42
-    material.roughness = isDark ? 0.32 : 0.46
-    material.envMapIntensity = isDark ? 0.72 : 0.55
+    material.color = new THREE.Color(isDark ? '#26302d' : '#d7ded2')
+    material.metalness = isDark ? 0.64 : 0.42
+    material.roughness = isDark ? 0.34 : 0.46
+    material.envMapIntensity = isDark ? 1.35 : 0.72
   } else if (name.includes('surfacemetal')) {
-    material.color = new THREE.Color(isDark ? '#111a1a' : '#c9d4cc')
-    material.metalness = isDark ? 0.82 : 0.52
-    material.roughness = isDark ? 0.3 : 0.42
-    material.envMapIntensity = isDark ? 0.78 : 0.58
+    material.color = new THREE.Color(isDark ? '#222b2b' : '#c9d4cc')
+    material.metalness = isDark ? 0.72 : 0.52
+    material.roughness = isDark ? 0.28 : 0.42
+    material.envMapIntensity = isDark ? 1.45 : 0.76
   } else if (name.includes('interiorblack')) {
-    material.color = new THREE.Color(isDark ? '#070b0c' : '#323c38')
-    material.metalness = isDark ? 0.56 : 0.34
-    material.roughness = isDark ? 0.52 : 0.58
-    material.envMapIntensity = isDark ? 0.64 : 0.5
+    material.color = new THREE.Color(isDark ? '#18201f' : '#323c38')
+    material.metalness = isDark ? 0.42 : 0.34
+    material.roughness = isDark ? 0.46 : 0.58
+    material.envMapIntensity = isDark ? 1.12 : 0.62
   } else if (name.includes('keyboard')) {
     material.color = new THREE.Color(isDark ? '#ffffff' : '#f7f3e7')
     material.emissive = new THREE.Color(isDark ? '#dfffe8' : '#fff3d2')
