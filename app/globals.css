@@ -1863,6 +1863,13 @@ html[data-theme-transitioning] .theme-toggle__icon {
   will-change: opacity;
 }
 
+.home-globe-hidden {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
 .typewriter-title {
   font-size: clamp(2.5rem, 6vw, 5rem);
   font-weight: 900;

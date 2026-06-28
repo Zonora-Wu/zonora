@@ -31,8 +31,9 @@ function Shape({
   }, [geometry]);
 
   useFrame((_, delta) => {
-    ref.current.rotation.x += delta * 0.3 * speed;
-    ref.current.rotation.y += delta * 0.5 * speed;
+    const capped = Math.min(delta, 0.1);
+    ref.current.rotation.x += capped * 0.3 * speed;
+    ref.current.rotation.y += capped * 0.5 * speed;
   });
 
   return (

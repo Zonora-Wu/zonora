@@ -16,6 +16,17 @@ function Globe() {
   const targetRot = useRef({ x: 0, y: 0 });
   const baseRotationY = useRef(0);
 
+  // 标签页切换回来后重置 idle 计时器，避免动画突然跳转
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        lastMouseTime = performance.now();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
+
   const particles = useMemo(() => {
     const count = 2800;
     const geo = new THREE.BufferGeometry();
@@ -47,6 +58,9 @@ function Globe() {
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
+    // 限制 delta 防止切换标签页回来后出现剧烈跳变
+    const cappedDelta = Math.min(delta, 0.1);
+
     const idle = performance.now() - lastMouseTime > 2400;
     if (idle) {
       targetRot.current.x += (0 - targetRot.current.x) * 0.012;
@@ -56,7 +70,7 @@ function Globe() {
       targetRot.current.y += (mousePos.x * 0.5 - targetRot.current.y) * 0.032;
     }
 
-    baseRotationY.current += delta * 0.018;
+    baseRotationY.current += cappedDelta * 0.018;
     groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetRot.current.x * 0.33, 0.022);
     groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, baseRotationY.current + targetRot.current.y, 0.022);
   });

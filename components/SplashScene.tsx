@@ -33,8 +33,9 @@ function NebulaRing({
   }, [count, radius]);
 
   useFrame((_, delta) => {
-    ref.current.rotation.y += delta * speed;
-    ref.current.rotation.x += delta * speed * 0.15;
+    const capped = Math.min(delta, 0.1);
+    ref.current.rotation.y += capped * speed;
+    ref.current.rotation.x += capped * speed * 0.15;
   });
 
   return (
@@ -64,8 +65,9 @@ function CoreGlow() {
   const glowRef = useRef<THREE.Mesh>(null!);
 
   useFrame((_, delta) => {
-    ref.current.rotation.y += delta * 0.15;
-    ref.current.rotation.x += delta * 0.08;
+    const capped = Math.min(delta, 0.1);
+    ref.current.rotation.y += capped * 0.15;
+    ref.current.rotation.x += capped * 0.08;
     if (glowRef.current) {
       const s = 1 + Math.sin(Date.now() * 0.001) * 0.06;
       glowRef.current.scale.setScalar(s);
@@ -119,8 +121,9 @@ function DistantStars() {
   }, []);
 
   useFrame((_, delta) => {
-    ref.current.rotation.y += delta * 0.015;
-    ref.current.rotation.x += delta * 0.005;
+    const capped = Math.min(delta, 0.1);
+    ref.current.rotation.y += capped * 0.015;
+    ref.current.rotation.x += capped * 0.005;
   });
 
   return (
