@@ -1985,6 +1985,26 @@ html[data-theme-transitioning] .theme-toggle__icon {
   }
 }
 
+.home-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 0.75rem 1rem;
+  z-index: 10;
+  pointer-events: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+  user-select: none;
+}
+
+.home-footer p {
+  margin: 0;
+}
+
 /* ---- Hero ---- */
 .hero {
   padding: 5rem 0 3rem;

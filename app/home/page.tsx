@@ -37,6 +37,19 @@ export default function HomePage() {
       <div className="home-content">
         <TypewriterTitle />
       </div>
+      <footer className="home-footer">
+        <p>
+          <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ pointerEvents: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            渝ICP备2026008425号-2
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
