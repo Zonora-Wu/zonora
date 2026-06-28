@@ -13,11 +13,12 @@ type MarkdownBlock =
   | { type: "paragraph"; text: string }
   | { type: "blockquote"; text: string }
   | { type: "code"; language: string; code: string }
+  | { type: "image"; alt: string; src: string; caption?: string }
   | { type: "list"; ordered: boolean; items: string[] }
   | { type: "table"; headers: string[]; rows: string[][] }
   | { type: "rule" };
 
-const BLOCK_START = /^(#{2,3})\s|^```|^>\s?|^(?:-|\*|\+)\s+|^\d+\.\s+|^---+$|^\|/;
+const BLOCK_START = /^(#{2,3})\s|^```|^>\s?|^!\[|^(?:-|\*|\+)\s+|^\d+\.\s+|^---+$|^\|/;
 
 function parseInline(text: string): ReactNode[] {
   const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).filter(Boolean);
@@ -82,6 +83,26 @@ function parseMarkdown(markdown: string): { blocks: MarkdownBlock[]; headings: H
 
     if (/^---+$/.test(line.trim())) {
       blocks.push({ type: "rule" });
+      index += 1;
+      continue;
+    }
+
+    const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imageMatch) {
+      let caption: string | undefined;
+      const nextLine = lines[index + 1]?.trim();
+      const captionMatch = nextLine?.match(/^\*(.+)\*$/);
+      if (captionMatch) {
+        caption = captionMatch[1].trim();
+        index += 1;
+      }
+
+      blocks.push({
+        type: "image",
+        alt: imageMatch[1].trim(),
+        src: imageMatch[2].trim(),
+        caption,
+      });
       index += 1;
       continue;
     }
@@ -182,6 +203,15 @@ export default function MarkdownArticle({
 
           if (block.type === "rule") {
             return <hr key={index} />;
+          }
+
+          if (block.type === "image") {
+            return (
+              <figure className="article-image-block" key={index}>
+                <img src={block.src} alt={block.alt} />
+                {block.caption ? <figcaption>{parseInline(block.caption)}</figcaption> : null}
+              </figure>
+            );
           }
 
           if (block.type === "code") {

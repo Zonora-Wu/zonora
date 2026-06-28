@@ -2,24 +2,17 @@
 
 import { useRef } from "react";
 import Link from "next/link";
+import type { Project } from "@/data/projects";
 
 export default function ProjectCard({
   slug,
   name,
   description,
-  detail,
   tags,
   image,
+  imageAlt,
   icon = "🔐",
-}: {
-  slug: string;
-  name: string;
-  description: string;
-  detail: string;
-  tags: string[];
-  image?: string;
-  icon?: string;
-}) {
+}: Pick<Project, "slug" | "name" | "description" | "tags" | "image" | "imageAlt" | "icon">) {
   const cardRef = useRef<HTMLAnchorElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -48,13 +41,10 @@ export default function ProjectCard({
       <article className="model-card project-card">
         <div className="model-card-thumb">
           {image ? (
-            <img src={image} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={image} alt={imageAlt ?? name} className="model-card-thumb__image" />
           ) : (
-            <div style={{
-              width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-              background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)",
-            }}>
-              <span style={{ fontSize: "2.5rem", opacity: 0.3 }}>{icon}</span>
+            <div className="model-card-thumb__fallback">
+              <span className="model-card-thumb__fallback-icon">{icon}</span>
             </div>
           )}
           <div className="model-card-badge">{tags[0]}</div>
