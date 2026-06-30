@@ -43,7 +43,7 @@ export default function HomePage() {
             href="https://beian.miit.gov.cn/"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ pointerEvents: "auto" }}
+            style={{ pointerEvents: "auto", color: "var(--muted)", opacity: 1 }}
             onClick={(e) => e.stopPropagation()}
           >
             渝ICP备2026008425号-2
